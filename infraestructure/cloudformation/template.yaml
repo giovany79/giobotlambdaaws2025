@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Telegram Bot Lambda Function
+
+Resources:
+  TelegramBotFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: telegram-bot-lambda
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.9
+      CodeUri: .
+      MemorySize: 512
+      Timeout: 30
+      Environment:
+        Variables:
+          OPENAI_API_KEY: !Ref OpenAIKey
+          TELEGRAM_BOT_TOKEN: !Ref TelegramBotToken
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /telegram
+            Method: POST
+
+Parameters:
+  OpenAIKey:
+    Type: String
+    Description: OpenAI API Key
+    NoEcho: true
+  TelegramBotToken:
+    Type: String
+    Description: Telegram Bot Token
+    NoEcho: true
