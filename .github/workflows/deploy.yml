@@ -22,6 +22,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    - name: Check if AWS secret exists
+      run: |
+        if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+          echo "Missing AWS_ACCESS_KEY_ID"; exit 1;
+        fi
+        if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+          echo "Missing AWS_SECRET_ACCESS_KEY"; exit 1;
+        fi
+        echo "Both secrets exist"
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v3
       with:
