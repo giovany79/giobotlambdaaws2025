@@ -1,68 +1,42 @@
-name: Deploy Lambda Function with CloudFormation
+name: Deploy Telegram Bot Lambda
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
-
-permissions:
-  id-token: write
-  contents: read
-
-env:
-  AWS_REGION: us-east-1
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: giobot
+    environment: giobot        # <-- Match con tus environment secrets
 
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Check if AWS secret exists
-      run: |
-        if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
-          echo "Missing AWS_ACCESS_KEY_ID"; exit 1;
-        fi
-        if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
-          echo "Missing AWS_SECRET_ACCESS_KEY"; exit 1;
-        fi
-        echo "Both secrets exist"
+    # (Opcional) Setea Python si tu build/test lo requiere antes del paquete
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v3
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-    
-    - name: Test AWS credentials
-      run: |
-        aws sts get-caller-identity
+        aws-region: us-east-1
 
-    - name: Install dependencies
+    - name: Package Lambda with CloudFormation
       run: |
-        pip install awscli boto3
+        aws cloudformation package \
+          --template-file infraestructure/cloudformation/template.yaml \
+          --s3-bucket giobotlambdaaws2025 \
+          --output-template-file packaged-template.yaml
 
-    - name: Create deployment package
-      run: |
-        zip -r function.zip lambda_function.py test_lambda.py requirements.txt
-
-    - name: Deploy CloudFormation Stack
+    - name: Deploy Lambda with CloudFormation
       run: |
         aws cloudformation deploy \
-          --template-file infraestructure/cloudformation/template.yaml \
+          --template-file packaged-template.yaml \
           --stack-name telegram-bot-stack \
-          --capabilities CAPABILITY_IAM \
-          --parameter-overrides \
-            OpenAIKey=${{ secrets.OPENAI_KEY }} \
-            TelegramBotToken=${{ secrets.TELEGRAM_TOKEN }} \
-          --region ${{ env.AWS_REGION }}
+          --capabilities CAPABILITY_NAMED_IAM \
+          --parameter-overrides TelegramToken=${{ secrets.TELEGRAM_TOKEN }}
 
-    - name: Clean up
-      run: |
-        rm function.zip
+    # (Opcional) otros pasos post-deploy (notificaciones, validaciones, etc)

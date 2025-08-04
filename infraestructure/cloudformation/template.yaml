@@ -1,34 +1,42 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Telegram Bot Lambda Function
+
+Description: >
+  Template para desplegar Lambda Telegram Bot y sus recursos
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: python3.11
+    MemorySize: 256
 
 Resources:
   TelegramBotFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: telegram-bot-lambda
-      Handler: lambda_function.lambda_handler
-      Runtime: python3.9
-      CodeUri: .
-      MemorySize: 512
-      Timeout: 30
+      FunctionName: telegram-bot-giobot
+      Handler: app.lambda_handler       # Cambia por tu handler real dentro del zip
+      CodeUri: lambda/                 # Este folder lo empaquetará el CLI
+      Description: Bot de Telegram en Lambda desplegado vía CloudFormation
       Environment:
         Variables:
-          OPENAI_API_KEY: !Ref OpenAIKey
-          TELEGRAM_BOT_TOKEN: !Ref TelegramBotToken
+          TELEGRAM_TOKEN: !Ref TelegramToken
+          # Agrega más variables si necesitas
+      Policies:
+        - AWSLambdaBasicExecutionRole   # Log a CloudWatch
       Events:
-        Api:
+        ApiGatewayInvoke:
           Type: Api
           Properties:
-            Path: /telegram
+            Path: /webhook
             Method: POST
 
 Parameters:
-  OpenAIKey:
+  TelegramToken:
     Type: String
-    Description: OpenAI API Key
-    NoEcho: true
-  TelegramBotToken:
-    Type: String
-    Description: Telegram Bot Token
-    NoEcho: true
+    Description: Token de tu bot de Telegram
+
+Outputs:
+  LambdaFunctionArn:
+    Description: ARN de la función Lambda creada
+    Value: !GetAtt TelegramBotFunction.Arn
