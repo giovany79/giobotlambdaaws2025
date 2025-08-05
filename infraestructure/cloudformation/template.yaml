@@ -15,8 +15,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: telegram-bot-giobot
-      Handler: lambda_function.lambda_handler
-      CodeUri: ./
+      Handler: app.lambda_handler
+      CodeUri: lambda/
       Description: Bot de Telegram en Lambda desplegado vía CloudFormation
       Environment:
         Variables:
