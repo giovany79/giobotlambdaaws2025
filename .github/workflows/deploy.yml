@@ -29,10 +29,9 @@ jobs:
         python3 -m venv venv
         . venv/bin/activate
         pip install --upgrade pip
-        pip install --platform manylinux2014_x86_64 --only-binary=:all: --target python/ -r requirements.txt
+        mkdir -p python
+        pip install -r lambda/requirements.txt -t python/
 
-    
-    
     - name: Package Lambda with CloudFormation
       run: |
         aws cloudformation package \
