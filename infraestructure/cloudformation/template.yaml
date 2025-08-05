@@ -24,7 +24,7 @@ Resources:
       Environment:
         Variables:
           TELEGRAM_TOKEN: !Ref TelegramToken
-          OPENAI_KEY: !Ref OpenAIApiKey
+          OPENAI_API_KEY: !Ref OpenAIApiKey
       Policies:
         - AWSLambdaBasicExecutionRole   # Log a CloudWatch
       Events:
