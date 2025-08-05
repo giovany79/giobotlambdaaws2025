@@ -38,18 +38,21 @@ def lambda_handler(event, context):
         print(f"Received event: {json.dumps(event)}")
         
         # Handle different event formats
-        if 'body' not in event:
-            print("No 'body' key in event")
+        if 'body' in event:
+            # API Gateway format
+            if isinstance(event['body'], str):
+                body = json.loads(event['body'])
+            else:
+                body = event['body']
+        elif 'message' in event:
+            # Direct invocation format (Telegram webhook data directly)
+            body = event
+        else:
+            print("No valid message format found")
             return {
                 'statusCode': 400,
-                'body': json.dumps({'error': 'No body in request'})
+                'body': json.dumps({'error': 'No valid message format'})
             }
-        
-        # Parse the incoming event body
-        if isinstance(event['body'], str):
-            body = json.loads(event['body'])
-        else:
-            body = event['body']
         
         # Check if it's a valid Telegram webhook
         if 'message' not in body:
