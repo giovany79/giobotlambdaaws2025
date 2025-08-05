@@ -9,6 +9,9 @@ Globals:
     Timeout: 10
     Runtime: python3.11
     MemorySize: 256
+  Api:
+    Auth:
+      DefaultAuthorizer: NONE
 
 Resources:
   TelegramBotFunction:
@@ -33,9 +36,6 @@ Resources:
           Properties:
             Path: /webhook
             Method: POST
-            Auth:
-              ApiKeyRequired: false
-              AuthorizationType: NONE
 
 Parameters:
   TelegramToken:
