@@ -26,10 +26,11 @@ jobs:
 
     - name: Install dependencies for Lambda
       run: |
-        python3 -m venv venv
-        . venv/bin/activate
-        pip install --upgrade pip
+        mkdir -p lambda/python
         pip install -r lambda/requirements.txt -t lambda/python/
+        cd lambda
+        zip -r ../function.zip .
+        cd ..
 
     - name: Package Lambda with CloudFormation
       run: |
