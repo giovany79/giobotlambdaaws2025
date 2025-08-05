@@ -38,17 +38,15 @@ jobs:
         # Install dependencies in Lambda-compatible environment
         docker run --rm \
             -v "$PWD/$BUILD_DIR":/var/task \
+            --entrypoint /bin/bash \
             public.ecr.aws/lambda/python:3.11 \
-            /bin/bash -c "
-                # Clean up any existing dependencies
-                rm -rf ./*
-                
-                # Install dependencies with specific flags
+            -c "
+                cd /var/task && \
                 pip install --upgrade pip && \
-                pip install --no-cache-dir --no-deps -r requirements.txt -t . && \
+                pip install --no-cache-dir -r requirements.txt -t . && \
                 rm -rf __pycache__ && \
-                find . -type d -name "__pycache__" -exec rm -rf {} + && \
-                find . -type f -name "*.pyc" -exec rm -f {} +
+                find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true && \
+                find . -type f -name '*.pyc' -exec rm -f {} +
             "
         
         # Ensure package structure is correct
