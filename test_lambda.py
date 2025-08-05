@@ -9,7 +9,7 @@ def test_lambda_handler():
                 "chat": {
                     "id": 6299753048
                 },
-                "text": "Hola, ¿cómo estás?"
+                "text": "Hola Gio, ¿cómo estás?"
             }
         })
     }
