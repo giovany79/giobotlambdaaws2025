@@ -35,12 +35,40 @@ def send_message(chat_id, text):
 
 def lambda_handler(event, context):
     try:
-        # Parse the incoming event
-        body = json.loads(event['body'])
+        print(f"Received event: {json.dumps(event)}")
+        
+        # Handle different event formats
+        if 'body' not in event:
+            print("No 'body' key in event")
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'No body in request'})
+            }
+        
+        # Parse the incoming event body
+        if isinstance(event['body'], str):
+            body = json.loads(event['body'])
+        else:
+            body = event['body']
+        
+        # Check if it's a valid Telegram webhook
+        if 'message' not in body:
+            print("No 'message' key in body")
+            return {
+                'statusCode': 200,
+                'body': json.dumps({'message': 'Webhook received but no message to process'})
+            }
         
         # Extract chat ID and message text
         chat_id = body['message']['chat']['id']
-        user_message = body['message']['text']
+        user_message = body['message'].get('text', '')
+        
+        if not user_message:
+            print("No text message found")
+            return {
+                'statusCode': 200,
+                'body': json.dumps({'message': 'No text message to process'})
+            }
         
         print(f"User: {chat_id}")
         print(f"Received Message: {user_message}")
