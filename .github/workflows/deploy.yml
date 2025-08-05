@@ -52,6 +52,6 @@ jobs:
           --template-file packaged-template.yaml \
           --stack-name telegram-bot-stack \
           --capabilities CAPABILITY_NAMED_IAM \
-          --parameter-overrides TelegramToken=${{ secrets.TELEGRAM_TOKEN }}
+          --parameter-overrides TelegramToken=${{ secrets.TELEGRAM_TOKEN }} OpenAIApiKey=${{ secrets.OPENAI_KEY }}
 
     # (Opcional) otros pasos post-deploy (notificaciones, validaciones, etc)

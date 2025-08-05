@@ -24,7 +24,7 @@ Resources:
       Environment:
         Variables:
           TELEGRAM_TOKEN: !Ref TelegramToken
-          # Agrega más variables si necesitas
+          OPENAI_KEY: !Ref OpenAIApiKey
       Policies:
         - AWSLambdaBasicExecutionRole   # Log a CloudWatch
       Events:
@@ -38,6 +38,10 @@ Parameters:
   TelegramToken:
     Type: String
     Description: Token de tu bot de Telegram
+  OpenAIApiKey:
+    Type: String
+    Description: OpenAI API Key
+    NoEcho: true
 
 Outputs:
   LambdaFunctionArn:
