@@ -26,9 +26,13 @@ jobs:
 
     - name: Install dependencies for Lambda
       run: |
-        cd lambda
-        pip install -r requirements.txt -t . --platform linux_x86_64 --only-binary=:all:
+        python3 -m venv venv
+        . venv/bin/activate
+        pip install --upgrade pip
+        pip install --platform manylinux2014_x86_64 --only-binary=:all: --target python/ -r requirements.txt
 
+    
+    
     - name: Package Lambda with CloudFormation
       run: |
         aws cloudformation package \
