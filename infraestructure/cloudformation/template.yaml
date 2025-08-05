@@ -47,3 +47,7 @@ Outputs:
   LambdaFunctionArn:
     Description: ARN de la función Lambda creada
     Value: !GetAtt TelegramBotFunction.Arn
+  
+  ApiGatewayUrl:
+    Description: URL del API Gateway para el webhook de Telegram
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/webhook"
