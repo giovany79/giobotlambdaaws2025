@@ -56,6 +56,9 @@ jobs:
         cd "$BUILD_DIR"
         zip -r ../function.zip .
         cd ..
+        
+        # Move zip to CloudFormation directory
+        mv function.zip infraestructure/cloudformation/
 
     - name: Package Lambda with CloudFormation
       run: |
