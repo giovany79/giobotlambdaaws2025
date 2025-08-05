@@ -32,8 +32,8 @@ jobs:
         cp lambda/app.py build/
         # Copy requirements.txt
         cp lambda/requirements.txt build/
-        # Install dependencies directly in build directory
-        pip install -r build/requirements.txt -t build/
+        # Install dependencies for Lambda runtime (Linux x86_64)
+        pip install -r build/requirements.txt -t build/ --platform linux_x86_64 --only-binary=:all:
         # Zip everything from build directory and place it in the correct location
         cd build
         zip -r ../infraestructure/cloudformation/function.zip .
