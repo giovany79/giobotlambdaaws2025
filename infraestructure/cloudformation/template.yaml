@@ -16,7 +16,7 @@ Resources:
     Properties:
       FunctionName: telegram-bot-giobot
       Handler: app.lambda_handler
-      CodeUri: lambda/
+      CodeUri: ../../lambda/
       Description: Bot de Telegram en Lambda desplegado vía CloudFormation
       Environment:
         Variables:
