@@ -29,8 +29,7 @@ jobs:
         python3 -m venv venv
         . venv/bin/activate
         pip install --upgrade pip
-        mkdir -p python
-        pip install -r lambda/requirements.txt -t python/
+        pip install -r lambda/requirements.txt -t lambda/python/
 
     - name: Package Lambda with CloudFormation
       run: |

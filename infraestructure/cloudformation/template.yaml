@@ -17,6 +17,9 @@ Resources:
       FunctionName: telegram-bot-giobot
       Handler: app.lambda_handler
       CodeUri: ../../lambda/
+      Runtime: python3.11
+      MemorySize: 256
+      Timeout: 10
       Description: Bot de Telegram en Lambda desplegado vía CloudFormation
       Environment:
         Variables:
