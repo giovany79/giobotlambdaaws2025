@@ -1,5 +1,5 @@
 import json
-import lambda_function
+import app
 
 def test_lambda_handler():
     # Ejemplo de evento de Telegram
@@ -18,7 +18,7 @@ def test_lambda_handler():
     test_context = {}
     
     # Invocar la función
-    response = lambda_function.lambda_handler(test_event, test_context)
+    response = app.lambda_handler(test_event, test_context)
     
     print("\nRespuesta de la función:")
     print(json.dumps(response, indent=2))
