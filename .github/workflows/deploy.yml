@@ -24,6 +24,11 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
+    - name: Install dependencies for Lambda
+      run: |
+        cd lambda
+        pip install -r requirements.txt -t . --platform linux_x86_64 --only-binary=:all:
+
     - name: Package Lambda with CloudFormation
       run: |
         aws cloudformation package \
