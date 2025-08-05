@@ -33,6 +33,9 @@ Resources:
           Properties:
             Path: /webhook
             Method: POST
+            Auth:
+              ApiKeyRequired: false
+              AuthorizationType: NONE
 
 Parameters:
   TelegramToken:
