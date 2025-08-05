@@ -26,11 +26,18 @@ jobs:
 
     - name: Install dependencies for Lambda
       run: |
-        mkdir -p lambda/python
-        pip install -r lambda/requirements.txt -t lambda/python/
-        cd lambda
-        zip -r ../function.zip .
-        cd ..
+        # Create a build directory
+        mkdir -p build
+        # Copy Lambda code
+        cp lambda/app.py build/
+        # Copy requirements.txt
+        cp lambda/requirements.txt build/
+        # Install dependencies directly in build directory
+        pip install -r build/requirements.txt -t build/
+        # Zip everything from build directory and place it in the correct location
+        cd build
+        zip -r ../../infraestructure/cloudformation/function.zip .
+        cd ../..
 
     - name: Package Lambda with CloudFormation
       run: |

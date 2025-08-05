@@ -16,7 +16,7 @@ Resources:
     Properties:
       FunctionName: telegram-bot-giobot
       Handler: app.lambda_handler
-      CodeUri: ./function.zip
+      CodeUri: function.zip
       Runtime: python3.11
       MemorySize: 256
       Timeout: 10
