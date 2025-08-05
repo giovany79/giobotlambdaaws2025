@@ -36,7 +36,7 @@ jobs:
         pip install -r build/requirements.txt -t build/
         # Zip everything from build directory and place it in the correct location
         cd build
-        zip -r ../../infraestructure/cloudformation/function.zip .
+        zip -r ../infraestructure/cloudformation/function.zip .
         cd ../..
 
     - name: Package Lambda with CloudFormation
