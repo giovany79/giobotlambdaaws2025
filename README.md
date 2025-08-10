@@ -22,5 +22,5 @@
 
 3. Probar url telegram
    ```bash
-   curl -X POST https://api.telegram.org/bot<TOKEN>/sendMessage -d chat_id=6299753048 -d text="Hello, World!"
+   curl -X GET https://api.telegram.org/bot8434484264:AAEB3LyDPqyexF5gdFLffRyzzO8NVDRO9jY/getUpdates
    ```
