@@ -12,6 +12,9 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
+
+print(f"OPENAI_API_KEY: {os.getenv("OPENAI_API_KEY")}")
+print(f"TOKEN: {TOKEN}")
 def get_openai_response(prompt):
     try:
         response = client.chat.completions.create(
