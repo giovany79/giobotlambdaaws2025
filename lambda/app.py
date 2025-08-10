@@ -46,8 +46,11 @@ def lambda_handler(event, context):
             else:
                 body = event['body']
         elif 'message' in event:
-            # Direct message format
+            # Direct message format (for testing)
+            print("Using direct message format for testing")
             body = event
+            # Add a dummy update_id for testing
+            body['update_id'] = 123456789
         else:
             print("No valid message format found")
             return {
