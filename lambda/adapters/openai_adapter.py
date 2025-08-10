@@ -1,6 +1,6 @@
 from openai import OpenAI
 
-from ..domain.interfaces import AIServiceInterface
+from domain.interfaces import AIServiceInterface
 
 
 class OpenAIAdapter(AIServiceInterface):

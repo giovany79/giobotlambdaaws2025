@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Protocol
 
-from .entities import Message, BotResponse
+from domain.entities import Message, BotResponse
 
 
 class AIServiceInterface(ABC):

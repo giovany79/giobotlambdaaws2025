@@ -1,12 +1,12 @@
 import json
 from typing import Dict, Any
 
-from .use_cases.process_message import ProcessMessageUseCase, ProcessMessageRequest
-from .adapters.openai_adapter import OpenAIAdapter
-from .adapters.telegram_adapter import TelegramAdapter
-from .adapters.logger import Logger
-from .infrastructure.config import Config
-from .infrastructure.parsers import TelegramEventParser
+from use_cases.process_message import ProcessMessageUseCase, ProcessMessageRequest
+from adapters.openai_adapter import OpenAIAdapter
+from adapters.telegram_adapter import TelegramAdapter
+from adapters.logger import Logger
+from infrastructure.config import Config
+from infrastructure.parsers import TelegramEventParser
 
 
 def lambda_handler(event: Dict[str, Any], context=None) -> Dict[str, Any]:

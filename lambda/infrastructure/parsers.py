@@ -1,7 +1,7 @@
 import json
 from typing import Optional, Dict, Any
 
-from ..domain.entities import TelegramUpdate, Message, ChatId
+from domain.entities import TelegramUpdate, Message, ChatId
 
 
 class TelegramEventParser:

@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from ..domain.entities import Message, BotResponse
-from ..domain.interfaces import AIServiceInterface, MessagingServiceInterface, LoggerInterface
+from domain.entities import Message, BotResponse
+from domain.interfaces import AIServiceInterface, MessagingServiceInterface, LoggerInterface
 
 
 @dataclass

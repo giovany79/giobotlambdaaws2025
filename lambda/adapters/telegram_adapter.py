@@ -1,7 +1,7 @@
 import requests
 
-from ..domain.entities import BotResponse
-from ..domain.interfaces import MessagingServiceInterface
+from domain.entities import BotResponse
+from domain.interfaces import MessagingServiceInterface
 
 
 class TelegramAdapter(MessagingServiceInterface):
