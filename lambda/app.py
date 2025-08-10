@@ -29,9 +29,6 @@ def get_openai_response(prompt):
 
 def send_message(chat_id, text):
     print(f"TOKEN: {TOKEN}")
-    print(f"chat_id: {chat_id}")
-    print(f"text: {text}")
-
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
     params = {"chat_id": chat_id, "text": text}
     response = requests.post(url, params=params)
