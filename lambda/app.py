@@ -1,131 +1,75 @@
 import json
-import os
-import time
-import requests
-from openai import OpenAI
-from dotenv import load_dotenv
+from typing import Dict, Any
 
-# Load environment variables from .env file
-load_dotenv()
+from .use_cases.process_message import ProcessMessageUseCase, ProcessMessageRequest
+from .adapters.openai_adapter import OpenAIAdapter
+from .adapters.telegram_adapter import TelegramAdapter
+from .adapters.logger import Logger
+from .infrastructure.config import Config
+from .infrastructure.parsers import TelegramEventParser
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-def get_openai_response(prompt):
+def lambda_handler(event: Dict[str, Any], context=None) -> Dict[str, Any]:
+    logger = Logger()
+    
     try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=200,
-            temperature=0.5
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        print(f"Error calling OpenAI API: {str(e)}")
-        return "Sorry, I encountered an error processing your request. Please try again later."
-
-def send_message(chat_id, text):
-    print(f"TOKEN: {TOKEN}")
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    params = {"chat_id": chat_id, "text": text}
-    response = requests.post(url, params=params)
-    return response
-
-def lambda_handler(event, context):
-    try:
-        print(f"Received event: {json.dumps(event)}")
+        logger.info(f"Received event: {json.dumps(event)}")
         
-        # Handle different event formats
-        if 'body' in event:
-            # API Gateway format
-            if isinstance(event['body'], str):
-                body = json.loads(event['body'])
-            else:
-                body = event['body']
-        elif 'message' in event:
-            # Direct message format (for testing)
-            print("Using direct message format for testing")
-            body = event
-            # Add a dummy update_id for testing
-            body['update_id'] = 123456789
-        else:
-            print("No valid message format found")
+        config = Config.from_env()
+        
+        ai_service = OpenAIAdapter(
+            api_key=config.openai_api_key,
+            model=config.openai_model
+        )
+        messaging_service = TelegramAdapter(bot_token=config.telegram_bot_token)
+        
+        use_case = ProcessMessageUseCase(
+            ai_service=ai_service,
+            messaging_service=messaging_service,
+            logger=logger
+        )
+        
+        telegram_update = TelegramEventParser.parse(event)
+        if not telegram_update:
+            logger.error("Invalid event format")
             return {
                 'statusCode': 400,
-                'body': json.dumps({'error': 'No valid message format'})
+                'body': json.dumps({'error': 'Invalid event format'})
             }
         
-        # Validate Telegram webhook update
-        if 'update_id' not in body:
-            print("Invalid Telegram webhook update")
+        if not telegram_update.message:
+            logger.info("No message to process")
             return {
                 'statusCode': 200,
-                'body': json.dumps({'message': 'Invalid Telegram webhook update'})
+                'body': json.dumps({'message': 'No message to process'})
             }
         
-        # Extract message details
-        message = body.get('message', {})
-        chat_id = message.get('chat', {}).get('id')
-        user_message = message.get('text', '').strip()
+        request = ProcessMessageRequest(message=telegram_update.message)
+        result = use_case.execute(request)
         
-        if not chat_id or not user_message:
-            print("No valid chat ID or message text found")
-            return {
-                'statusCode': 200,
-                'body': json.dumps({'message': 'No valid message to process'})
-            }
-        
-        print(f"User: {chat_id}")
-        print(f"Received Message: {user_message}")
-        
-        try:
-            # Get response from OpenAI
-            gpt_response = get_openai_response(user_message)
-            print(f"GPT Response: {gpt_response}")
-            
-            # Send response to Telegram
-            response_telegram = send_message(chat_id, gpt_response)
-            
-            if response_telegram.status_code != 200:
-                print(f"Failed to send message to Telegram: {response_telegram.text}")
-                return {
-                    'statusCode': 500,
-                    'body': json.dumps({
-                        'error': 'Failed to send response to Telegram',
-                        'details': response_telegram.text
-                    })
-                }
-                
+        if result.success:
             return {
                 'statusCode': 200,
                 'body': json.dumps({
                     'message': 'Message processed successfully',
-                    'chat_id': chat_id
+                    'chat_id': telegram_update.message.chat_id.value
                 })
             }
-            
-        except Exception as processing_error:
-            error_message = f"Error processing message: {str(processing_error)}"
-            print(error_message)
-            
-            # Send error message back to user
-            send_message(chat_id, "Sorry, I encountered an error processing your request. Please try again later.")
+        else:
             return {
                 'statusCode': 500,
                 'body': json.dumps({
-                    'error': error_message
+                    'error': result.error_message or 'Unknown error'
                 })
             }
             
     except Exception as e:
-        print(f"Error in lambda_handler: {str(e)}")
+        error_msg = f"Fatal error in lambda_handler: {str(e)}"
+        logger.error(error_msg)
         return {
             'statusCode': 500,
             'body': json.dumps({
-                'error': 'Failed to process message',
+                'error': 'Internal server error',
                 'details': str(e)
             })
         }
