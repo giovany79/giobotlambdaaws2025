@@ -257,6 +257,6 @@ Este proyecto está bajo la Licencia MIT - ver [LICENSE](LICENSE) para detalles.
 ---
 
 **¿Necesitas ayuda?** 
-- 🐛 [Reportar bug](https://github.com/tu-usuario/giobotlambdaaws2025/issues)
-- 💬 [Discusiones](https://github.com/tu-usuario/giobotlambdaaws2025/discussions)
+- 🐛 [Reportar bug](https://github.com/giovany79/giobotlambdaaws2025/issues)
+- 💬 [Discusiones](https://github.com/giovany79/giobotlambdaaws2025/discussions)
 - 📧 Email: tu-email@ejemplo.com
