@@ -45,6 +45,9 @@ def lambda_handler(event, context):
                 body = json.loads(event['body'])
             else:
                 body = event['body']
+        elif 'message' in event:
+            # Direct message format
+            body = event
         else:
             print("No valid message format found")
             return {
