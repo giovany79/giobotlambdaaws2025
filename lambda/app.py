@@ -81,7 +81,8 @@ def lambda_handler(event, context):
         print(f"GPT Response: {gpt_response}")
         
         # Send response to Telegram
-        send_message(chat_id, gpt_response)
+        response_telegram =send_message(chat_id, gpt_response)
+        print(f"Telegram Response: {response_telegram}")
         
         return {
             'statusCode': 200,
