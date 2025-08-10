@@ -45,9 +45,6 @@ def lambda_handler(event, context):
                 body = json.loads(event['body'])
             else:
                 body = event['body']
-        elif 'message' in event:
-            # Direct invocation format (Telegram webhook data directly)
-            body = event
         else:
             print("No valid message format found")
             return {
@@ -55,45 +52,70 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': 'No valid message format'})
             }
         
-        # Check if it's a valid Telegram webhook
-        if 'message' not in body:
-            print("No 'message' key in body")
+        # Validate Telegram webhook update
+        if 'update_id' not in body:
+            print("Invalid Telegram webhook update")
             return {
                 'statusCode': 200,
-                'body': json.dumps({'message': 'Webhook received but no message to process'})
+                'body': json.dumps({'message': 'Invalid Telegram webhook update'})
             }
         
-        # Extract chat ID and message text
-        chat_id = body['message']['chat']['id']
-        user_message = body['message'].get('text', '')
+        # Extract message details
+        message = body.get('message', {})
+        chat_id = message.get('chat', {}).get('id')
+        user_message = message.get('text', '').strip()
         
-        if not user_message:
-            print("No text message found")
+        if not chat_id or not user_message:
+            print("No valid chat ID or message text found")
             return {
                 'statusCode': 200,
-                'body': json.dumps({'message': 'No text message to process'})
+                'body': json.dumps({'message': 'No valid message to process'})
             }
         
         print(f"User: {chat_id}")
         print(f"Received Message: {user_message}")
         
-        # Get response from OpenAI
-        gpt_response = get_openai_response(user_message)
-        print(f"GPT Response: {gpt_response}")
-        
-        # Send response to Telegram
-        response_telegram =send_message(chat_id, gpt_response)
-        print(f"Telegram Response: {response_telegram}")
-        
-        return {
-            'statusCode': 200,
-            'body': json.dumps({
-                'message': 'Message processed successfully',
-                'chat_id': chat_id
-            })
-        }
+        try:
+            # Get response from OpenAI
+            gpt_response = get_openai_response(user_message)
+            print(f"GPT Response: {gpt_response}")
+            
+            # Send response to Telegram
+            response_telegram = send_message(chat_id, gpt_response)
+            
+            if response_telegram.status_code != 200:
+                print(f"Failed to send message to Telegram: {response_telegram.text}")
+                return {
+                    'statusCode': 500,
+                    'body': json.dumps({
+                        'error': 'Failed to send response to Telegram',
+                        'details': response_telegram.text
+                    })
+                }
+                
+            return {
+                'statusCode': 200,
+                'body': json.dumps({
+                    'message': 'Message processed successfully',
+                    'chat_id': chat_id
+                })
+            }
+            
+        except Exception as processing_error:
+            error_message = f"Error processing message: {str(processing_error)}"
+            print(error_message)
+            
+            # Send error message back to user
+            send_message(chat_id, "Sorry, I encountered an error processing your request. Please try again later.")
+            return {
+                'statusCode': 500,
+                'body': json.dumps({
+                    'error': error_message
+                })
+            }
+            
     except Exception as e:
-        print(f"Error processing message: {str(e)}")
+        print(f"Error in lambda_handler: {str(e)}")
         return {
             'statusCode': 500,
             'body': json.dumps({
