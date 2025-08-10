@@ -31,9 +31,13 @@ jobs:
         rm -rf "$BUILD_DIR"
         mkdir -p "$BUILD_DIR"
         
-        # Copy Lambda code and requirements
+        # Copy Lambda code and requirements with clean architecture structure
         cp lambda/app.py "$BUILD_DIR/"
         cp lambda/requirements.txt "$BUILD_DIR/"
+        cp -r lambda/use_cases "$BUILD_DIR/"
+        cp -r lambda/adapters "$BUILD_DIR/"
+        cp -r lambda/domain "$BUILD_DIR/"
+        cp -r lambda/infrastructure "$BUILD_DIR/"
         
         # Install dependencies in Lambda-compatible environment
         docker run --rm \
