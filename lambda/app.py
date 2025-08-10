@@ -78,6 +78,7 @@ def lambda_handler(event, context):
         
         # Get response from OpenAI
         gpt_response = get_openai_response(user_message)
+        print(f"GPT Response: {gpt_response}")
         
         # Send response to Telegram
         send_message(chat_id, gpt_response)

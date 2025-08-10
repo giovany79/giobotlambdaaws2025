@@ -19,3 +19,8 @@
    ```bash
    python3 lambda_function.py
    ```
+
+3. Probar url telegram
+   ```bash
+   curl -X POST https://api.telegram.org/bot<TOKEN>/sendMessage -d chat_id=6299753048 -d text="Hello, World!"
+   ```
