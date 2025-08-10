@@ -67,6 +67,10 @@ jobs:
           --s3-bucket giobotlambdaaws2025 \
           --output-template-file packaged-template.yaml
 
+    - name: Set environment variables
+      run: |
+        echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> $GITHUB_ENV
+
     - name: Deploy Lambda with CloudFormation
       run: |
         aws cloudformation deploy \
