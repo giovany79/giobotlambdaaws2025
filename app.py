@@ -147,13 +147,6 @@ def send_telegram_message(chat_id: str, text: str) -> None:
 def lambda_handler(event: dict, context) -> dict:
     """
     Handle incoming Lambda events from API Gateway (Telegram webhook).
-    
-    Args:
-        event: Dictionary containing the incoming event data
-        context: Lambda context object
-        
-    Returns:
-        dict: Response object with statusCode and body
     """
     print("Received event:", json.dumps(event, default=str))
     
@@ -167,75 +160,94 @@ def lambda_handler(event: dict, context) -> dict:
             }
             
         # Parse the request body
-        body = {}
-        if 'body' in event:
-            try:
-                body = json.loads(event['body']) if isinstance(event['body'], str) else event['body']
-            except json.JSONDecodeError:
-                return {
-                    'statusCode': 400,
-                    'headers': {'Content-Type': 'application/json'},
-                    'body': json.dumps({'error': 'Invalid JSON in request body'})
-                }
-        
-        # Extract message from Telegram webhook format
-        message = body.get('message', {})
-        chat = message.get('chat', {})
-        chat_id = chat.get('id')
-        user_message = message.get('text', '')
-        
-        if not chat_id:
-            print("No chat_id found in message:", json.dumps(body, indent=2))
+        try:
+            body = json.loads(event['body']) if isinstance(event.get('body'), str) else (event.get('body') or {})
+            print("Parsed body:", json.dumps(body, default=str))
+        except json.JSONDecodeError as e:
+            print(f"Error parsing JSON: {str(e)}")
             return {
                 'statusCode': 400,
                 'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'error': 'No chat_id found in message'})
+                'body': json.dumps({'error': 'Invalid JSON in request body'})
+            }
+        
+        # Extract message from different possible formats
+        message = {}
+        if 'message' in body:
+            message = body['message']
+        elif 'body' in body and isinstance(body['body'], dict):
+            if 'message' in body['body']:
+                message = body['body']['message']
+            else:
+                message = body['body']
+        
+        # Debug log the message structure
+        print("Extracted message:", json.dumps(message, default=str))
+        
+        # Try to get chat_id from different possible locations
+        chat_id = None
+        if 'chat' in message and 'id' in message['chat']:
+            chat_id = message['chat']['id']
+        elif 'message' in message and 'chat' in message['message']:
+            chat_id = message['message']['chat'].get('id')
+        elif 'chat_id' in body:
+            chat_id = body['chat_id']
+        
+        # Get user message text
+        user_message = ''
+        if 'text' in message:
+            user_message = message['text']
+        elif 'message' in message and 'text' in message['message']:
+            user_message = message['message']['text']
+        elif 'body' in body and 'text' in body['body']:
+            user_message = body['body']['text']
+        
+        print(f"Chat ID: {chat_id}, Message: {user_message}")
+        
+        if not chat_id:
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({
+                    'error': 'No chat_id found in message',
+                    'received_body': body,
+                    'message': message
+                })
             }
             
-        # Process the message
-        try:
-            if not user_message:
-                return {
-                    'statusCode': 200,
-                    'headers': {'Content-Type': 'application/json'},
-                    'body': json.dumps({'status': 'No message to process'})
-                }
-                
-            print(f"Processing message from chat {chat_id}: {user_message}")
-            response_text = get_ai_response(user_message)
-            
-            # Send response to Telegram
-            send_telegram_message(chat_id, response_text)
-            
+        if not user_message:
             return {
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'status': 'Message processed'})
+                'body': json.dumps({'status': 'No message content to process'})
             }
             
-        except Exception as e:
-            error_msg = f"Error processing message: {str(e)}"
-            print(error_msg)
-            
-            # Try to notify user about the error
-            try:
-                send_telegram_message(chat_id, "❌ Lo siento, ocurrió un error al procesar tu mensaje.")
-            except Exception as send_error:
-                print(f"Failed to send error message to user: {send_error}")
-            
-            return {
-                'statusCode': 500,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'error': 'Internal server error', 'details': str(e)})
-            }
-            
+        # Process the message
+        response_text = get_ai_response(user_message)
+        
+        # Send response to Telegram
+        send_telegram_message(chat_id, response_text)
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json'},
+            'body': json.dumps({'status': 'Message processed'})
+        }
+        
     except Exception as e:
         error_msg = f"Unexpected error: {str(e)}"
         print(error_msg)
+        import traceback
+        print("Traceback:", traceback.format_exc())
+        
         return {
             'statusCode': 500,
             'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({'error': 'Internal server error', 'details': str(e)})
+            'body': json.dumps({
+                'error': 'Internal server error',
+                'details': str(e),
+                'event': event
+            })
         }
 
 def _parse_event_body(event: dict) -> dict:
