@@ -9,13 +9,11 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: giobot        # <-- Match con tus environment secrets
+    environment: giobot
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
-
-    # (Opcional) Setea Python si tu build/test lo requiere antes del paquete
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v3
@@ -31,13 +29,9 @@ jobs:
         rm -rf "$BUILD_DIR"
         mkdir -p "$BUILD_DIR"
         
-        # Copy Lambda code and requirements with clean architecture structure
-        cp lambda/app.py "$BUILD_DIR/"
-        cp lambda/requirements.txt "$BUILD_DIR/"
-        cp -r lambda/use_cases "$BUILD_DIR/"
-        cp -r lambda/adapters "$BUILD_DIR/"
-        cp -r lambda/domain "$BUILD_DIR/"
-        cp -r lambda/infrastructure "$BUILD_DIR/"
+        # Copy necessary files
+        cp app.py "$BUILD_DIR/"
+        cp requirements.txt "$BUILD_DIR/"
         
         # Install dependencies in Lambda-compatible environment
         docker run --rm \
@@ -53,15 +47,13 @@ jobs:
                 find . -type f -name '*.pyc' -exec rm -f {} +
             "
         
-        # Ensure package structure is correct
-        touch "$BUILD_DIR/__init__.py"
-        
         # Create deployment package
         cd "$BUILD_DIR"
         zip -r ../function.zip .
         cd ..
         
         # Move zip to CloudFormation directory
+        mkdir -p infraestructure/cloudformation
         mv function.zip infraestructure/cloudformation/
 
     - name: Package Lambda with CloudFormation
@@ -71,10 +63,6 @@ jobs:
           --s3-bucket giobotlambdaaws2025 \
           --output-template-file packaged-template.yaml
 
-    - name: Set environment variables
-      run: |
-        echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> $GITHUB_ENV
-
     - name: Deploy Lambda with CloudFormation
       run: |
         aws cloudformation deploy \
@@ -82,5 +70,3 @@ jobs:
           --stack-name telegram-bot-stack \
           --capabilities CAPABILITY_NAMED_IAM \
           --parameter-overrides TelegramToken=${{ secrets.TELEGRAM_BOT_TOKEN }} OpenAIApiKey=${{ secrets.OPENAI_API_KEY }} Handler=app.lambda_handler
-
-    # (Opcional) otros pasos post-deploy (notificaciones, validaciones, etc)
