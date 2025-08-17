@@ -20,6 +20,56 @@ Globals:
       AllowOrigin: "'*'"
 
 Resources:
+  # IAM Role for API Gateway to write logs to CloudWatch
+  ApiGatewayCloudWatchLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [apigateway.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      Path: '/'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs'
+
+  # CloudWatch Log Group for API Gateway
+  ApiGatewayLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/apigateway/${AWS::StackName}-api"
+      RetentionInDays: 7
+
+  # API Gateway with CloudWatch Logs enabled
+  TelegramBotApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "${AWS::StackName}-api"
+      StageName: Prod
+      EndpointConfiguration: REGIONAL
+      Auth:
+        ApiKeyRequired: false
+      MethodSettings:
+        - HttpMethod: "*"
+          ResourcePath: "/*"
+          LoggingLevel: INFO
+          DataTraceEnabled: true
+          MetricsEnabled: true
+      AccessLogSetting:
+        DestinationArn: !GetAtt ApiGatewayLogGroup.Arn
+        Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "caller":"$context.identity.caller", "user":"$context.identity.user","requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","resourcePath":"$context.resourcePath", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength" }'
+
+  # API Gateway Account for CloudWatch Logs
+  ApiGatewayAccount:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn: !GetAtt ApiGatewayCloudWatchLogsRole.Arn
+    DependsOn: 
+      - ApiGatewayCloudWatchLogsRole
+      - TelegramBotApi
+
   TelegramBotFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -44,21 +94,6 @@ Resources:
             Method: POST
             RestApiId: !Ref TelegramBotApi
 
-  # Add explicit API Gateway resource
-  TelegramBotApi:
-    Type: AWS::Serverless::Api
-    Properties:
-      StageName: Prod
-      EndpointConfiguration: REGIONAL
-      Auth:
-        ApiKeyRequired: false
-      MethodSettings:
-        - HttpMethod: "*"
-          ResourcePath: "/*"
-          LoggingLevel: INFO
-          DataTraceEnabled: true
-          MetricsEnabled: true
-
 Parameters:
   TelegramToken:
     Type: String
@@ -76,3 +111,7 @@ Outputs:
   ApiGatewayUrl:
     Description: URL del API Gateway para el webhook de Telegram
     Value: !Sub "https://${TelegramBotApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/webhook"
+    
+  CloudWatchLogGroup:
+    Description: CloudWatch Log Group for API Gateway
+    Value: !Ref ApiGatewayLogGroup
