@@ -159,48 +159,55 @@ def lambda_handler(event: dict, context) -> dict:
                 'body': json.dumps({'status': 'Webhook is working'})
             }
             
-        # Parse the request body
-        try:
-            body = json.loads(event['body']) if isinstance(event.get('body'), str) else (event.get('body') or {})
-            print("Parsed body:", json.dumps(body, default=str))
-        except json.JSONDecodeError as e:
-            print(f"Error parsing JSON: {str(e)}")
-            return {
-                'statusCode': 400,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'error': 'Invalid JSON in request body'})
-            }
-        
-        # Extract message from different possible formats
-        message = {}
-        if 'message' in body:
-            message = body['message']
-        elif 'body' in body and isinstance(body['body'], dict):
-            if 'message' in body['body']:
-                message = body['body']['message']
+        # Check if the message is directly in the event (direct Lambda invocation)
+        if 'message' in event:
+            message = event['message']
+            body = {}
+        else:
+            # Parse the request body for API Gateway events
+            try:
+                body = json.loads(event['body']) if isinstance(event.get('body'), str) else (event.get('body') or {})
+                print("Parsed body:", json.dumps(body, default=str))
+            except json.JSONDecodeError as e:
+                print(f"Error parsing JSON: {str(e)}")
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': 'Invalid JSON in request body'})
+                }
+            
+            # Extract message from different possible formats
+            if 'message' in body:
+                message = body['message']
+            elif 'body' in body and isinstance(body['body'], dict):
+                if 'message' in body['body']:
+                    message = body['body']['message']
+                else:
+                    message = body['body']
             else:
-                message = body['body']
+                message = body
         
         # Debug log the message structure
         print("Extracted message:", json.dumps(message, default=str))
         
         # Try to get chat_id from different possible locations
         chat_id = None
-        if 'chat' in message and 'id' in message['chat']:
-            chat_id = message['chat']['id']
-        elif 'message' in message and 'chat' in message['message']:
-            chat_id = message['message']['chat'].get('id')
-        elif 'chat_id' in body:
-            chat_id = body['chat_id']
-        
-        # Get user message text
-        user_message = ''
-        if 'text' in message:
-            user_message = message['text']
-        elif 'message' in message and 'text' in message['message']:
-            user_message = message['message']['text']
-        elif 'body' in body and 'text' in body['body']:
-            user_message = body['body']['text']
+        if isinstance(message, dict):
+            if 'chat' in message and isinstance(message['chat'], dict) and 'id' in message['chat']:
+                chat_id = message['chat']['id']
+            elif 'message' in message and isinstance(message['message'], dict) and 'chat' in message['message']:
+                chat_id = message['message']['chat'].get('id')
+            
+            # Get user message text
+            user_message = ''
+            if 'text' in message:
+                user_message = message['text']
+            elif 'message' in message and isinstance(message['message'], dict) and 'text' in message['message']:
+                user_message = message['message']['text']
+            elif 'body' in message and isinstance(message['body'], dict) and 'text' in message['body']:
+                user_message = message['body']['text']
+        else:
+            user_message = str(message)
         
         print(f"Chat ID: {chat_id}, Message: {user_message}")
         
@@ -210,7 +217,8 @@ def lambda_handler(event: dict, context) -> dict:
                 'headers': {'Content-Type': 'application/json'},
                 'body': json.dumps({
                     'error': 'No chat_id found in message',
-                    'received_body': body,
+                    'received_event': event,
+                    'parsed_body': body if 'body' in locals() else None,
                     'message': message
                 })
             }
