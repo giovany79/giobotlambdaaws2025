@@ -33,6 +33,10 @@ jobs:
         cp app.py "$BUILD_DIR/"
         cp requirements.txt "$BUILD_DIR/"
         
+        # Debug: Show contents of requirements.txt
+        echo "Contents of requirements.txt:"
+        cat requirements.txt
+        
         # Install dependencies in Lambda-compatible environment
         docker run --rm \
             -v "$PWD/$BUILD_DIR":/var/task \
@@ -40,12 +44,21 @@ jobs:
             public.ecr.aws/lambda/python:3.11 \
             -c "
                 cd /var/task && \
+                echo 'Installing pip...' && \
                 pip install --upgrade pip && \
-                pip install --no-cache-dir -r requirements.txt -t . && \
+                echo 'Installing requirements...' && \
+                pip install --no-cache-dir -r requirements.txt -t . --platform manylinux2014_x86_64 --only-binary=:all: && \
+                echo 'Verifying pandas installation...' && \
+                python -c 'import pandas; print(f\"Pandas version: {pandas.__version__}\")' && \
+                echo 'Cleaning up...' && \
                 rm -rf __pycache__ && \
                 find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true && \
                 find . -type f -name '*.pyc' -exec rm -f {} +
             "
+        
+        # Verify files were installed
+        echo "Contents of build directory:"
+        ls -la "$BUILD_DIR"
         
         # Create deployment package
         cd "$BUILD_DIR"
