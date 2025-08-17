@@ -144,36 +144,101 @@ def send_telegram_message(chat_id: str, text: str) -> None:
     response = requests.post(url, json=data)
     return response.json()
 
-def lambda_handler(event, context):
+def lambda_handler(event: dict, context) -> dict:
+    """
+    Handle incoming Lambda events from Telegram webhook.
+    
+    Args:
+        event: Dictionary containing the incoming event data
+        context: Lambda context object
+        
+    Returns:
+        dict: Response object with statusCode and body
+    """
     try:
-        # Parsear el evento de entrada
-        body = json.loads(event['body'])
+        print("Received event:", json.dumps(event, default=str))  # Log the incoming event
         
-        # Extraer información del mensaje
-        message = body.get('message', {})
-        chat_id = message.get('chat', {}).get('id')
-        user_message = message.get('text', '')
-        
-        if not chat_id or not user_message:
-            return {'statusCode': 400, 'body': 'Mensaje inválido'}
-        
-        # Obtener respuesta de IA
-        response_text = get_ai_response(user_message)
-        
-        # Enviar respuesta a Telegram
-        send_telegram_message(chat_id, response_text)
-        
-        return {
-            'statusCode': 200,
-            'body': json.dumps({'message': 'Mensaje procesado correctamente'})
-        }
-        
+        # 1. Parse and validate the incoming event
+        try:
+            body = _parse_event_body(event)
+            message = _extract_message(body)
+            chat_id = _get_chat_id(message, body)
+            user_message = _get_user_message(message, body)
+            
+            if not chat_id:
+                raise ValueError("Could not determine chat_id from the event")
+                
+            if not user_message:
+                return _create_response(200, "No message content to process")
+                
+            # 2. Process the message
+            response_text = get_ai_response(user_message)
+            
+            # 3. Send response back to user
+            send_telegram_message(chat_id, response_text)
+            
+            return _create_response(200, "Message processed successfully")
+            
+        except json.JSONDecodeError as je:
+            return _create_response(400, f"Invalid JSON in request: {str(je)}")
+            
+        except ValueError as ve:
+            return _create_response(400, f"Invalid request: {str(ve)}")
+            
     except Exception as e:
-        print(f"Error en lambda_handler: {str(e)}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': 'Error interno del servidor'})
-        }
+        error_msg = f"Unexpected error: {str(e)}"
+        print(f"Error in lambda_handler: {error_msg}")
+        print(f"Event that caused error: {event}")
+        return _create_response(500, error_msg)
+
+def _parse_event_body(event: dict) -> dict:
+    """Parse and return the event body, handling different formats."""
+    if 'body' not in event:
+        return event  # Direct Lambda invocation
+        
+    body = event['body']
+    
+    # Handle base64 encoded body
+    if event.get('isBase64Encoded', False):
+        import base64
+        body = base64.b64decode(body).decode('utf-8')
+    
+    # Parse JSON if body is a string
+    if isinstance(body, str):
+        body = json.loads(body)
+    
+    return body
+
+def _extract_message(body: dict) -> dict:
+    """Extract message from the parsed body."""
+    message = body.get('message', {})
+    if not message and 'body' in body:
+        message = body.get('body', {})
+    return message
+
+def _get_chat_id(message: dict, body: dict) -> str:
+    """Extract chat_id from message or body."""
+    if 'chat' in message:
+        return message.get('chat', {}).get('id')
+    return body.get('chat_id')
+
+def _get_user_message(message: dict, body: dict) -> str:
+    """Extract user message from message or body."""
+    if 'text' in message:
+        return message['text']
+    return body.get('text', '')
+
+def _create_response(status_code: int, message: str) -> dict:
+    """Create a standardized response object."""
+    is_error = status_code >= 400
+    return {
+        'statusCode': status_code,
+        'headers': {'Content-Type': 'application/json'},
+        'body': json.dumps({
+            'status': 'error' if is_error else 'success',
+            'message': message
+        })
+    }
 
 # Para pruebas locales
 if __name__ == "__main__":
