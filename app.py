@@ -41,10 +41,32 @@ def analyze_finances(question):
     df = pd.DataFrame(transactions)
     
     # Limpiar y convertir montos a numérico
-    df['Amount'] = df['Amount'].str.replace('$', '').str.replace('.', '').str.replace(',', '.').astype(float)
+    # Primero, reemplazar valores vacíos con NaN y luego eliminarlos
+    df['Amount'] = df['Amount'].str.strip()
+    df = df[df['Amount'] != '']  # Eliminar filas con montos vacíos
+    
+    # Verificar si hay datos después de la limpieza
+    if len(df) == 0:
+        return "No se encontraron transacciones válidas para analizar."
+    
+    # Convertir los montos a numérico
+    df['Amount'] = (
+        df['Amount']
+        .str.replace('$', '', regex=False)
+        .str.replace('.', '', regex=False)
+        .str.replace(',', '.', regex=False)
+        .astype(float)
+    )
     
     # Convertir fechas
-    df['Date'] = pd.to_datetime(df['Date'])
+    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+    
+    # Eliminar filas con fechas inválidas
+    df = df.dropna(subset=['Date'])
+    
+    # Verificar si hay datos después de la limpieza
+    if len(df) == 0:
+        return "No se encontraron transacciones con fechas válidas para analizar."
     
     # Análisis básico
     total_income = df[df['Income/expensive'] == 'income']['Amount'].sum()
