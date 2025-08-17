@@ -12,6 +12,12 @@ Globals:
   Api:
     Auth:
       DefaultAuthorizer: NONE
+    BinaryMediaTypes:  # Add support for binary media types
+      - '*/*'
+    Cors:  # Enable CORS
+      AllowMethods: "'*'"
+      AllowHeaders: "'*'"
+      AllowOrigin: "'*'"
 
 Resources:
   TelegramBotFunction:
@@ -36,6 +42,22 @@ Resources:
           Properties:
             Path: /webhook
             Method: POST
+            RestApiId: !Ref TelegramBotApi
+
+  # Add explicit API Gateway resource
+  TelegramBotApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      EndpointConfiguration: REGIONAL
+      Auth:
+        ApiKeyRequired: false
+      MethodSettings:
+        - HttpMethod: "*"
+          ResourcePath: "/*"
+          LoggingLevel: INFO
+          DataTraceEnabled: true
+          MetricsEnabled: true
 
 Parameters:
   TelegramToken:
@@ -53,4 +75,4 @@ Outputs:
   
   ApiGatewayUrl:
     Description: URL del API Gateway para el webhook de Telegram
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/webhook"
+    Value: !Sub "https://${TelegramBotApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/webhook"

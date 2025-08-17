@@ -146,7 +146,7 @@ def send_telegram_message(chat_id: str, text: str) -> None:
 
 def lambda_handler(event: dict, context) -> dict:
     """
-    Handle incoming Lambda events from Telegram webhook.
+    Handle incoming Lambda events from API Gateway (Telegram webhook).
     
     Args:
         event: Dictionary containing the incoming event data
@@ -155,30 +155,30 @@ def lambda_handler(event: dict, context) -> dict:
     Returns:
         dict: Response object with statusCode and body
     """
-    print("Received event:", json.dumps(event, default=str))  # Log the incoming event
+    print("Received event:", json.dumps(event, default=str))
     
     try:
-        # 1. Parse the incoming event
-        body = _parse_event_body(event)
-        
-        # 2. Handle Telegram webhook verification (if this is a new webhook setup)
-        if 'queryStringParameters' in event and event.get('queryStringParameters', {}).get('test'):
+        # Handle API Gateway test event
+        if event.get('httpMethod') == 'GET' and event.get('queryStringParameters', {}).get('test') == '1':
             return {
                 'statusCode': 200,
+                'headers': {'Content-Type': 'application/json'},
                 'body': json.dumps({'status': 'Webhook is working'})
             }
             
-        # 3. Extract message data from Telegram webhook
-        if 'message' not in body and 'body' in body:
-            # Sometimes the message is nested in the body
+        # Parse the request body
+        body = {}
+        if 'body' in event:
             try:
-                if isinstance(body['body'], str):
-                    body = json.loads(body['body'])
-                else:
-                    body = body['body']
-            except (json.JSONDecodeError, TypeError):
-                pass
-                
+                body = json.loads(event['body']) if isinstance(event['body'], str) else event['body']
+            except json.JSONDecodeError:
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'error': 'Invalid JSON in request body'})
+                }
+        
+        # Extract message from Telegram webhook format
         message = body.get('message', {})
         chat = message.get('chat', {})
         chat_id = chat.get('id')
@@ -186,40 +186,57 @@ def lambda_handler(event: dict, context) -> dict:
         
         if not chat_id:
             print("No chat_id found in message:", json.dumps(body, indent=2))
-            return _create_response(400, "No chat_id found in message")
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({'error': 'No chat_id found in message'})
+            }
             
-        # 4. Process the message
+        # Process the message
         try:
             if not user_message:
-                return _create_response(200, "No message content to process")
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({'status': 'No message to process'})
+                }
                 
+            print(f"Processing message from chat {chat_id}: {user_message}")
             response_text = get_ai_response(user_message)
             
-            # 5. Send response to Telegram
+            # Send response to Telegram
             send_telegram_message(chat_id, response_text)
             
-            # 6. Return success response to API Gateway
             return {
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'status': 'success'})
+                'body': json.dumps({'status': 'Message processed'})
             }
             
         except Exception as e:
             error_msg = f"Error processing message: {str(e)}"
             print(error_msg)
-            # Try to send error message to user
+            
+            # Try to notify user about the error
             try:
                 send_telegram_message(chat_id, "❌ Lo siento, ocurrió un error al procesar tu mensaje.")
             except Exception as send_error:
                 print(f"Failed to send error message to user: {send_error}")
             
-            return _create_response(500, error_msg)
+            return {
+                'statusCode': 500,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({'error': 'Internal server error', 'details': str(e)})
+            }
             
     except Exception as e:
         error_msg = f"Unexpected error: {str(e)}"
         print(error_msg)
-        return _create_response(500, error_msg)
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json'},
+            'body': json.dumps({'error': 'Internal server error', 'details': str(e)})
+        }
 
 def _parse_event_body(event: dict) -> dict:
     """Parse and return the event body, handling different formats."""
