@@ -41,9 +41,9 @@ Resources:
       MethodSettings:
         - HttpMethod: "*"
           ResourcePath: "/*"
-          LoggingLevel: OFF  # Disable logging initially
-          DataTraceEnabled: false
-          MetricsEnabled: false
+          LoggingLevel: "OFF"  # Must be a string
+          DataTraceEnabled: "false"  # Must be a string
+          MetricsEnabled: "false"  # Must be a string
 
   # Lambda Function
   TelegramBotFunction:
