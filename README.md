@@ -260,3 +260,51 @@ Este proyecto está bajo la Licencia MIT - ver [LICENSE](LICENSE) para detalles.
 - 🐛 [Reportar bug](https://github.com/giovany79/giobotlambdaaws2025/issues)
 - 💬 [Discusiones](https://github.com/giovany79/giobotlambdaaws2025/discussions)
 - 📧 Email: tu-email@ejemplo.com
+
+## Movement Tracking Commands
+
+### Add a New Movement
+```
+agregar <descripción>;<tipo>;<monto>;<categoría>[;fecha]
+```
+
+**Examples:**
+```
+agregar Salario;ingreso;3000000;salario
+agregar Supermercado;gasto;350000;comida;2025-01-15
+agregar Transporte;gasto;25000;transporte
+```
+
+### View Movements
+```
+ver [filtros]
+```
+
+**Available Filters:**
+- `ultimos N`: Show last N days
+- `tipo:ingreso/gasto`: Filter by type
+- `categoria:nombre`: Filter by category
+
+**Examples:**
+```
+ver
+ver ultimos 7
+ver categoria:comida
+ver tipo:gasto ultimos 30
+```
+
+### View Categories
+```
+categorias
+```
+
+### Get Financial Summary
+```
+resumen [ultimos N]
+```
+
+**Examples:**
+```
+resumen
+resumen ultimos 30
+```
