@@ -85,6 +85,16 @@ def analyze_finances(question):
     )
     monthly_expenses['Month'] = monthly_expenses['Month'].dt.strftime('%Y-%m')
     
+    # Gastos por categoría por mes
+    monthly_expenses_by_category = (
+        df[df['Income/expensive'] == 'expensive']
+        .groupby(['Month', 'Category'])['Amount']
+        .sum()
+        .unstack(fill_value=0)
+        .reset_index()
+    )
+    monthly_expenses_by_category['Month'] = monthly_expenses_by_category['Month'].dt.strftime('%Y-%m')
+    
     # Preparar contexto para la respuesta
     context = f"""
     Resumen Financiero:
@@ -105,6 +115,27 @@ def analyze_finances(question):
     context += "\nGastos por categoría:\n"
     for category, amount in expense_by_category.items():
         context += f"  - {category}: ${amount:,.0f}\n"
+    
+    # Agregar gastos por categoría por mes
+    if not monthly_expenses_by_category.empty:
+        context += "\nGastos por categoría por mes:\n"
+        for _, month_data in monthly_expenses_by_category.iterrows():
+            month = month_data['Month']
+            month_total = sum(amount for category, amount in month_data.items() 
+                           if category != 'Month' and amount > 0)
+            
+            context += f"\n  {month} (Total: ${month_total:,.0f}):\n"
+            # Ordenar categorías por monto descendente
+            categories_sorted = sorted(
+                [(cat, amt) for cat, amt in month_data.items() 
+                 if cat != 'Month' and amt > 0],
+                key=lambda x: x[1], 
+                reverse=True
+            )
+            
+            for category, amount in categories_sorted:
+                percentage = (amount / month_total) * 100 if month_total > 0 else 0
+                context += f"    - {category}: ${amount:,.0f} ({percentage:.1f}%)\n"
     
     # Usar OpenAI para responder la pregunta basada en los datos
     prompt = f"""
