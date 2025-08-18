@@ -15,9 +15,6 @@ logger.setLevel(logging.INFO)
 # Cargar variables de entorno
 load_dotenv()
 
-# Configuración
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 def lambda_handler(event, context):
     logger.info(f"Received event: {json.dumps(event, indent=2)}")
