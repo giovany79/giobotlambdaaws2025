@@ -18,38 +18,45 @@ def extract_message(event):
             
         # Decodificar si está en base64
         if is_base64:
-            body_str = base64.b64decode(body_str).decode('utf-8')
+            try:
+                body_str = base64.b64decode(body_str).decode('utf-8')
+            except Exception as e:
+                logger.error(f"Error decoding base64: {str(e)}")
+                raise ValueError("Invalid message encoding")
             
         # Parseamos el cuerpo POST como JSON
-        body_json = json.loads(body_str)
+        try:
+            body_json = json.loads(body_str)
+        except json.JSONDecodeError as e:
+            logger.error(f"Error parsing JSON: {str(e)}")
+            raise ValueError("Invalid message format")
         
         # Verificamos que el JSON tenga la estructura esperada
         if not isinstance(body_json, dict) or "message" not in body_json:
+            logger.error("Missing 'message' in request body")
             raise ValueError("Invalid message format")
             
         message_data = body_json["message"]
         
         # Verificar que el mensaje tenga un chat
         if not isinstance(message_data, dict) or "chat" not in message_data:
+            logger.error("Missing chat information in message")
             raise ValueError("Invalid message structure - missing chat information")
             
         chat_id = message_data["chat"]["id"]
         
         # Manejar mensajes de texto
-        if "text" in message_data:
-            message_text = message_data["text"]
+        if "text" in message_data and message_data["text"]:
+            return chat_id, message_data["text"]
         # Manejar mensajes de voz
         elif "voice" in message_data:
-            raise ValueError("Voice messages are not supported. Please send a text message instead.")
+            logger.info("Voice message received")
+            return chat_id, "[VOICE_MESSAGE]"
         else:
-            raise ValueError("Unsupported message type. Please send a text message.")
+            logger.warning(f"Unsupported message type: {message_data.keys()}")
+            return chat_id, "[UNSUPPORTED_MESSAGE]"
 
-        # Retornamos el chatid y el mensaje
-        return chat_id, message_text
-        
-    except json.JSONDecodeError as e:
-        logger.error(f"Error decoding JSON: {str(e)}")
-        raise ValueError("Invalid JSON format")
     except Exception as e:
-        logger.error(f"Error processing message: {str(e)}")
-        raise
+        logger.error(f"Error in extract_message: {str(e)}")
+        # Si no podemos extraer el chat_id, usamos 0 como valor por defecto
+        return 0, f"[ERROR] {str(e)}"
