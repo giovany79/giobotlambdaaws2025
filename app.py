@@ -3,6 +3,7 @@ import time
 import random
 from handlers.telegram_handler import extract_message
 from services.telegram_client import send_message_to_telegram
+from services.openai_client import get_ai_response
 from dotenv import load_dotenv
 import os
 import logging
@@ -26,7 +27,7 @@ def lambda_handler(event, context):
         chat_id, message_text = extract_message(event)
         logger.info(f"Processing message from chat {chat_id}: {message_text}")
         
-        response = "¡Hola! He recibido tu mensaje."
+        response = get_ai_response(message_text)
                                       
         # Enviamos la respuesta a Telegram
         send_message_to_telegram(chat_id, response)
