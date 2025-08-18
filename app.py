@@ -39,22 +39,23 @@ def lambda_handler(event, context):
             "body": json.dumps({"status": "success", "message": "Mensaje procesado correctamente"})
         }
 
+    except ValueError as e:
+        error_msg = str(e)
+        logger.error(f"Validation error: {error_msg}")
+        # Enviar mensaje de error al usuario
+        if 'chat_id' in locals():
+            send_message_to_telegram(chat_id, f"⚠️ {error_msg}")
+        return {
+            "statusCode": 400,
+            "body": json.dumps({"error": error_msg})
+        }
     except Exception as e:
         error_msg = f"Error processing request: {str(e)}"
         logger.error(error_msg)
-        
-        # En caso de error, intentamos notificar al usuario a través de Telegram
-        try:
-            if 'chat_id' in locals():
-                send_message_to_telegram(chat_id, "❌ Lo siento, ha ocurrido un error al procesar tu mensaje.")
-        except Exception as inner_e:
-            logger.error(f"Could not send error notification: {str(inner_e)}")
-            
+        # Enviar mensaje de error genérico al usuario
+        if 'chat_id' in locals():
+            send_message_to_telegram(chat_id, "❌ Lo siento, ha ocurrido un error al procesar tu mensaje. Por favor, inténtalo de nuevo.")
         return {
             "statusCode": 500,
-            "body": json.dumps({
-                "status": "error",
-                "message": "Error procesando el mensaje",
-                "error": str(e)
-            })
+            "body": json.dumps({"error": "Internal server error"})
         }

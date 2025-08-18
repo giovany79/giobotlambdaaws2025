@@ -28,12 +28,21 @@ def extract_message(event):
             raise ValueError("Invalid message format")
             
         message_data = body_json["message"]
-        if not isinstance(message_data, dict) or "chat" not in message_data or "text" not in message_data:
-            raise ValueError("Invalid message structure")
-
-        # Extraemos el chatid y el mensaje
+        
+        # Verificar que el mensaje tenga un chat
+        if not isinstance(message_data, dict) or "chat" not in message_data:
+            raise ValueError("Invalid message structure - missing chat information")
+            
         chat_id = message_data["chat"]["id"]
-        message_text = message_data["text"]
+        
+        # Manejar mensajes de texto
+        if "text" in message_data:
+            message_text = message_data["text"]
+        # Manejar mensajes de voz
+        elif "voice" in message_data:
+            raise ValueError("Voice messages are not supported. Please send a text message instead.")
+        else:
+            raise ValueError("Unsupported message type. Please send a text message.")
 
         # Retornamos el chatid y el mensaje
         return chat_id, message_text
