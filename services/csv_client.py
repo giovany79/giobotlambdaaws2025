@@ -1,8 +1,11 @@
 import csv
+import os
 from datetime import datetime
 import pandas as pd
 
-CSV_FILE = 'movements.csv'
+# Get the directory where this script is located
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CSV_FILE = os.path.join(BASE_DIR, 'movements.csv')
 
 def load_transactions():
     """Cargar transacciones desde el archivo CSV"""
