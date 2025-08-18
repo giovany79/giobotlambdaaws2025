@@ -116,6 +116,43 @@ def analyze_finances(question):
     for category, amount in expense_by_category.items():
         context += f"  - {category}: ${amount:,.0f}\n"
     
+    # Agregar gastos por categoría por mes con totales
+    if not monthly_expenses_by_category.empty:
+        context += "\nGastos por categoría por mes:\n"
+        
+        # Obtener todas las categorías únicas
+        categories = [col for col in monthly_expenses_by_category.columns if col != 'Month']
+        
+        # Crear un diccionario para almacenar totales por categoría
+        category_totals = {category: 0 for category in categories}
+        
+        # Procesar cada mes
+        for _, month_data in monthly_expenses_by_category.iterrows():
+            month = month_data['Month']
+            month_total = sum(month_data[category] for category in categories)
+            
+            context += f"\n  {month} (Total: ${month_total:,.0f}):\n"
+            
+            # Ordenar categorías por monto descendente para el mes actual
+            sorted_categories = sorted(
+                [(cat, month_data[cat]) for cat in categories if month_data[cat] > 0],
+                key=lambda x: x[1],
+                reverse=True
+            )
+            
+            for category, amount in sorted_categories:
+                percentage = (amount / month_total) * 100 if month_total > 0 else 0
+                context += f"    - {category}: ${amount:,.0f} ({percentage:.1f}%)\n"
+                # Acumular totales por categoría
+                category_totals[category] += amount
+        
+        # Agregar totales por categoría
+        context += "\n  Total por categoría (todos los meses):\n"
+        for category, total in sorted(category_totals.items(), key=lambda x: x[1], reverse=True):
+            if total > 0:  # Solo mostrar categorías con gastos
+                percentage = (total / total_expenses) * 100 if total_expenses > 0 else 0
+                context += f"    - {category}: ${total:,.0f} ({percentage:.1f}% del total de gastos)\n"
+    
     # Usar OpenAI para responder la pregunta basada en los datos
     prompt = f"""
     Eres un asistente financiero. Basándote en los siguientes datos:
