@@ -61,8 +61,29 @@ def analyze_finances(question):
     total_expenses = df[df['Income/expensive'] == 'expensive']['Amount'].sum()
     balance = total_income - total_expenses
     
-    # Categorías de gastos
+    # Gastos por categoría
     expense_by_category = df[df['Income/expensive'] == 'expensive'].groupby('Category')['Amount'].sum().sort_values(ascending=False)
+    
+    # Cálculos mensuales
+    df['Month'] = df['Date'].dt.to_period('M')
+    
+    # Ingresos por mes
+    monthly_income = (
+        df[df['Income/expensive'] == 'income']
+        .groupby('Month')['Amount']
+        .sum()
+        .reset_index()
+    )
+    monthly_income['Month'] = monthly_income['Month'].dt.strftime('%Y-%m')
+    
+    # Gastos por mes
+    monthly_expenses = (
+        df[df['Income/expensive'] == 'expensive']
+        .groupby('Month')['Amount']
+        .sum()
+        .reset_index()
+    )
+    monthly_expenses['Month'] = monthly_expenses['Month'].dt.strftime('%Y-%m')
     
     # Preparar contexto para la respuesta
     context = f"""
@@ -71,9 +92,17 @@ def analyze_finances(question):
     - Gastos totales: ${total_expenses:,.0f}
     - Balance: ${balance:,.0f}
     
-    Gastos por categoría:
+    Ingresos por mes:
     """
     
+    for _, row in monthly_income.iterrows():
+        context += f"  - {row['Month']}: ${row['Amount']:,.0f}\n"
+    
+    context += "\nGastos por mes:\n"
+    for _, row in monthly_expenses.iterrows():
+        context += f"  - {row['Month']}: ${row['Amount']:,.0f}\n"
+    
+    context += "\nGastos por categoría:\n"
     for category, amount in expense_by_category.items():
         context += f"  - {category}: ${amount:,.0f}\n"
     
