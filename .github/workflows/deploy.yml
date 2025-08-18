@@ -29,9 +29,11 @@ jobs:
         rm -rf "$BUILD_DIR"
         mkdir -p "$BUILD_DIR"
         
-        # Copy necessary files
+        # Copy necessary files and directories
         cp app.py "$BUILD_DIR/"
         cp requirements.txt "$BUILD_DIR/"
+        cp -r handlers "$BUILD_DIR/"
+        cp -r services "$BUILD_DIR/"
         
         # Debug: Show contents of requirements.txt
         echo "Contents of requirements.txt:"
