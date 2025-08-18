@@ -1,14 +1,24 @@
 # Importamos las librerías necesarias
 import json 
+import base64
+import logging
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 # Funcion para extraer el chat ID y el mensaje del evento
 def extract_message(event):
     try:
-        # Extraemos el cuerpo POST como String
+        # Extraemos el cuerpo POST
         body_str = event.get("body", "")
+        is_base64 = event.get("isBase64Encoded", False)
         
         if not body_str:
             raise ValueError("Empty request body")
+            
+        # Decodificar si está en base64
+        if is_base64:
+            body_str = base64.b64decode(body_str).decode('utf-8')
             
         # Parseamos el cuerpo POST como JSON
         body_json = json.loads(body_str)
@@ -29,8 +39,8 @@ def extract_message(event):
         return chat_id, message_text
         
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON: {str(e)}")
-    except KeyError as e:
-        raise ValueError(f"Missing required field: {str(e)}")
+        logger.error(f"Error decoding JSON: {str(e)}")
+        raise ValueError("Invalid JSON format")
     except Exception as e:
-        raise ValueError(f"Error processing message: {str(e)}")
+        logger.error(f"Error processing message: {str(e)}")
+        raise
