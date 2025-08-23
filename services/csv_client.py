@@ -87,75 +87,6 @@ def get_expenses_by_category_per_month():
     
     return result
 
-def get_movements_by_category_by_month():
-    """
-    Obtiene los movimientos detallados agrupados por categoría y mes
-    
-    Returns:
-        dict: Diccionario con la estructura {
-            'months': [lista de meses en formato 'YYYY-MM'],
-            'data': {
-                'month': {
-                    'category': [lista de movimientos]
-                }
-            }
-        }
-    """
-    transactions = load_transactions()
-    if not transactions:
-        return {'months': [], 'data': {}}
-    
-    df = pd.DataFrame(transactions)
-    
-    # Limpieza y conversión de datos
-    df['Amount'] = df['Amount'].str.strip()
-    df = df[df['Amount'] != '']
-    df['Amount'] = (
-        df['Amount']
-        .str.replace('$', '', regex=False)
-        .str.replace('.', '', regex=False)
-        .str.replace(',', '.', regex=False)
-        .astype(float)
-    )
-    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-    df = df.dropna(subset=['Date'])
-    
-    if len(df) == 0:
-        return {'months': [], 'data': {}}
-    
-    # Crear columna de mes
-    df['Month'] = df['Date'].dt.to_period('M').dt.strftime('%Y-%m')
-    
-    # Obtener todos los meses únicos ordenados
-    all_months = sorted(df['Month'].unique())
-    
-    # Organizar datos por mes y categoría
-    result = {
-        'months': all_months,
-        'data': {}
-    }
-    
-    for month in all_months:
-        result['data'][month] = {}
-        month_data = df[df['Month'] == month]
-        
-        # Agrupar por categoría para este mes
-        for category in month_data['Category'].unique():
-            category_data = month_data[month_data['Category'] == category]
-            
-            movements = []
-            for _, row in category_data.iterrows():
-                movements.append({
-                    'description': row['Description'],
-                    'amount': row['Amount'],
-                    'type': row['Income/expensive'],
-                    'date': row['Date'].strftime('%Y-%m-%d')
-                })
-            
-            result['data'][month][category] = movements
-    
-    return result
-
 def analyze_finances(question):
     """Analizar datos financieros y responder preguntas"""
     transactions = load_transactions()
@@ -186,7 +117,6 @@ def analyze_finances(question):
     
     # Obtener gastos por categoría por mes con detalles de transacciones
     expenses_data = get_expenses_by_category_per_month()
-    movements_data = get_movements_by_category_by_month()
     
     # Análisis básico
     total_income = df[df['Income/expensive'] == 'income']['Amount'].sum()
@@ -263,21 +193,6 @@ def analyze_finances(question):
             
             for category, amount in sorted_categories:
                 context += f"    - {category}: ${amount:,.0f}\n"
-    
-    # Agregar movimientos detallados por categoría por mes si están disponibles
-    if movements_data['months']:
-        context += "\nMovimientos detallados por categoría por mes:\n"
-        
-        for month in movements_data['months']:
-            context += f"\n  {month}:\n"
-            
-            for category, movements in movements_data['data'][month].items():
-                if movements:  # Solo mostrar categorías con movimientos
-                    total_category = sum(mov['amount'] for mov in movements)
-                    context += f"    {category} (Total: ${total_category:,.0f}):\n"
-                    
-                    for movement in movements:
-                        context += f"      - {movement['description']}: ${movement['amount']:,.0f} ({movement['date']})\n"
     
     # Usar OpenAI para responder la pregunta basada en los datos
     prompt = f"""
