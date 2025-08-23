@@ -21,6 +21,72 @@ def load_transactions():
         print(f"Error al cargar transacciones: {str(e)}")
         return []
 
+def get_expenses_by_category_per_month():
+    """
+    Obtiene los gastos agrupados por categoría y mes
+    
+    Returns:
+        dict: Diccionario con la estructura {
+            'months': [lista de meses en formato 'YYYY-MM'],
+            'categories': {
+                'Categoría1': [gasto_mes1, gasto_mes2, ...],
+                'Categoría2': [gasto_mes1, gasto_mes2, ...],
+                ...
+            }
+        }
+    """
+    transactions = load_transactions()
+    if not transactions:
+        return {'months': [], 'categories': {}}
+    
+    df = pd.DataFrame(transactions)
+    
+    # Limpieza y conversión de datos
+    df['Amount'] = df['Amount'].str.strip()
+    df = df[df['Amount'] != '']
+    df['Amount'] = (
+        df['Amount']
+        .str.replace('$', '', regex=False)
+        .str.replace('.', '', regex=False)
+        .str.replace(',', '.', regex=False)
+        .astype(float)
+    )
+    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+    df = df.dropna(subset=['Date'])
+    
+    # Filtrar solo gastos
+    expenses_df = df[df['Income/expensive'] == 'expensive'].copy()
+    if len(expenses_df) == 0:
+        return {'months': [], 'categories': {}}
+    
+    # Crear columna de mes
+    expenses_df['Month'] = expenses_df['Date'].dt.to_period('M').dt.strftime('%Y-%m')
+    
+    # Obtener todos los meses únicos ordenados
+    all_months = sorted(expenses_df['Month'].unique())
+    
+    # Agrupar por categoría y mes
+    grouped = expenses_df.groupby(['Category', 'Month'])['Amount'].sum().unstack(fill_value=0)
+    
+    # Asegurarse de que todos los meses estén presentes para cada categoría
+    for month in all_months:
+        if month not in grouped.columns:
+            grouped[month] = 0
+    
+    # Ordenar columnas (meses)
+    grouped = grouped[all_months]
+    
+    # Convertir a diccionario
+    result = {
+        'months': all_months,
+        'categories': {}
+    }
+    
+    for category, row in grouped.iterrows():
+        result['categories'][category] = row.tolist()
+    
+    return result
+
 def analyze_finances(question):
     """Analizar datos financieros y responder preguntas"""
     transactions = load_transactions()
@@ -29,15 +95,12 @@ def analyze_finances(question):
     df = pd.DataFrame(transactions)
     
     # Limpiar y convertir montos a numérico
-    # Primero, reemplazar valores vacíos con NaN y luego eliminarlos
     df['Amount'] = df['Amount'].str.strip()
-    df = df[df['Amount'] != '']  # Eliminar filas con montos vacíos
+    df = df[df['Amount'] != '']
     
-    # Verificar si hay datos después de la limpieza
     if len(df) == 0:
         return "No se encontraron transacciones válidas para analizar."
     
-    # Convertir los montos a numérico
     df['Amount'] = (
         df['Amount']
         .str.replace('$', '', regex=False)
@@ -46,15 +109,14 @@ def analyze_finances(question):
         .astype(float)
     )
     
-    # Convertir fechas
     df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-    
-    # Eliminar filas con fechas inválidas
     df = df.dropna(subset=['Date'])
     
-    # Verificar si hay datos después de la limpieza
     if len(df) == 0:
         return "No se encontraron transacciones con fechas válidas para analizar."
+    
+    # Obtener gastos por categoría por mes
+    expenses_by_category = get_expenses_by_category_per_month()
     
     # Análisis básico
     total_income = df[df['Income/expensive'] == 'income']['Amount'].sum()
@@ -85,16 +147,6 @@ def analyze_finances(question):
     )
     monthly_expenses['Month'] = monthly_expenses['Month'].dt.strftime('%Y-%m')
     
-    # Gastos por categoría por mes
-    monthly_expenses_by_category = (
-        df[df['Income/expensive'] == 'expensive']
-        .groupby(['Month', 'Category'])['Amount']
-        .sum()
-        .unstack(fill_value=0)
-        .reset_index()
-    )
-    monthly_expenses_by_category['Month'] = monthly_expenses_by_category['Month'].dt.strftime('%Y-%m')
-    
     # Preparar contexto para la respuesta
     context = f"""
     Resumen Financiero:
@@ -117,25 +169,24 @@ def analyze_finances(question):
         context += f"  - {category}: ${amount:,.0f}\n"
     
     # Agregar gastos por categoría por mes con totales
-    if not monthly_expenses_by_category.empty:
+    if expenses_by_category['months']:
         context += "\nGastos por categoría por mes:\n"
         
         # Obtener todas las categorías únicas
-        categories = [col for col in monthly_expenses_by_category.columns if col != 'Month']
+        categories = list(expenses_by_category['categories'].keys())
         
         # Crear un diccionario para almacenar totales por categoría
         category_totals = {category: 0 for category in categories}
         
         # Procesar cada mes
-        for _, month_data in monthly_expenses_by_category.iterrows():
-            month = month_data['Month']
-            month_total = sum(month_data[category] for category in categories)
+        for month in expenses_by_category['months']:
+            month_total = sum(expenses_by_category['categories'][category][expenses_by_category['months'].index(month)] for category in categories)
             
             context += f"\n  {month} (Total: ${month_total:,.0f}):\n"
             
             # Ordenar categorías por monto descendente para el mes actual
             sorted_categories = sorted(
-                [(cat, month_data[cat]) for cat in categories if month_data[cat] > 0],
+                [(cat, expenses_by_category['categories'][cat][expenses_by_category['months'].index(month)]) for cat in categories if expenses_by_category['categories'][cat][expenses_by_category['months'].index(month)] > 0],
                 key=lambda x: x[1],
                 reverse=True
             )
