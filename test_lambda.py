@@ -7,14 +7,78 @@ import app
 def test_lambda_handler():
     # Ejemplo de evento de Telegram
     test_event = {
-        "body": json.dumps({
-            "message": {
-                "chat": {
-                    "id": 6299753048
-                },
-                "text": "Hola Gio, ¿cómo estás?"
-            }
-        })
+        "resource": "/webhook",
+        "path": "/webhook",
+        "httpMethod": "POST",
+        "headers": {
+            "Accept-Encoding": "gzip, deflate",
+            "Content-Type": "application/json",
+            "Host": "ykhl1jughk.execute-api.us-east-1.amazonaws.com",
+            "X-Amzn-Trace-Id": "Root=1-68a9c12c-51b8e2194352213c3d2a1905",
+            "X-Forwarded-For": "91.108.5.42",
+            "X-Forwarded-Port": "443",
+            "X-Forwarded-Proto": "https"
+        },
+        "multiValueHeaders": {
+            "Accept-Encoding": [
+                "gzip, deflate"
+            ],
+            "Content-Type": [
+                "application/json"
+            ],
+            "Host": [
+                "ykhl1jughk.execute-api.us-east-1.amazonaws.com"
+            ],
+            "X-Amzn-Trace-Id": [
+                "Root=1-68a9c12c-51b8e2194352213c3d2a1905"
+            ],
+            "X-Forwarded-For": [
+                "91.108.5.42"
+            ],
+            "X-Forwarded-Port": [
+                "443"
+            ],
+            "X-Forwarded-Proto": [
+                "https"
+            ]
+        },
+        "queryStringParameters": None,
+        "multiValueQueryStringParameters": None,
+        "pathParameters": None,
+        "stageVariables": None,
+        "requestContext": {
+            "resourceId": "9wy0ys",
+            "resourcePath": "/webhook",
+            "httpMethod": "POST",
+            "extendedRequestId": "PwsfAHkRoAMEjYQ=",
+            "requestTime": "23/Aug/2025:13:25:00 +0000",
+            "path": "/Prod/webhook",
+            "accountId": "058585900003",
+            "protocol": "HTTP/1.1",
+            "stage": "Prod",
+            "domainPrefix": "ykhl1jughk",
+            "requestTimeEpoch": 1755955500491,
+            "requestId": "4bd004f7-82f0-48d9-ab6d-e5fdf738eb69",
+            "identity": {
+                "cognitoIdentityPoolId": None,
+                "accountId": None,
+                "cognitoIdentityId": None,
+                "caller": None,
+                "sourceIp": "91.108.5.42",
+                "principalOrgId": None,
+                "accessKey": None,
+                "cognitoAuthenticationType": None,
+                "cognitoAuthenticationProvider": None,
+                "userArn": None,
+                "userAgent": None,
+                "user": None
+            },
+            "domainName": "ykhl1jughk.execute-api.us-east-1.amazonaws.com",
+            "deploymentId": "a1a8mj",
+            "apiId": "ykhl1jughk"
+        },
+        "body": "eyJ1cGRhdGVfaWQiOjYyMjYzOTIzNSwKIm1lc3NhZ2UiOnsibWVzc2FnZV9pZCI6Mjc5LCJmcm9tIjp7ImlkIjo2Mjk5NzUzMDQ4LCJpc19ib3QiOmZhbHNlLCJmaXJzdF9uYW1lIjoiR2lvdmFueSIsImxhc3RfbmFtZSI6IlZpbGxlZ2FzIiwibGFuZ3VhZ2VfY29kZSI6ImVuIn0sImNoYXQiOnsiaWQiOjYyOTk3NTMwNDgsImZpcnN0X25hbWUiOiJHaW92YW55IiwibGFzdF9uYW1lIjoiVmlsbGVnYXMiLCJ0eXBlIjoicHJpdmF0ZSJ9LCJkYXRlIjoxNzU1OTU1NDI4LCJ0ZXh0IjoiTWUgcHVlZGVzIGRhciBsYSBsaXN0YSBkZSBtb3ZpbWllbnRvcyBkZWwgbWVzIGRlIGFnb3N0byBjb24gZWwgZGV0YWxsZSBkZSBjYWRhIG1vdmltaWVudG8ifX0=",
+        "isBase64Encoded": True
     }
     
     # Contexto falso (no utilizado en nuestro handler)
