@@ -1,206 +1,240 @@
 import os
 import csv
 from datetime import datetime
+from typing import Dict, List, Optional, Tuple, Union
 import pandas as pd
+from dataclasses import dataclass
+from pathlib import Path
 
-# Get the absolute path to the CSV file
-CSV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'movements.csv')
 
-def load_transactions():
-    """Cargar transacciones desde el archivo CSV"""
-    transactions = []
-    try:
-        with open(CSV_FILE, mode='r', encoding='utf-8') as file:
-            reader = csv.DictReader(file, delimiter=';')
-            for row in reader:
-                # Limpiar los valores de espacios en blanco
-                row = {k.strip(): v.strip() for k, v in row.items()}
-                transactions.append(row)
-        return transactions
-    except Exception as e:
-        print(f"Error al cargar transacciones: {str(e)}")
-        return []
+@dataclass
+class Transaction:
+    """Clase para representar una transacción financiera."""
+    date: datetime
+    description: str
+    amount: float
+    category: str
+    type: str  # 'income' o 'expensive'
 
-def get_expenses_by_category_per_month():
-    """
-    Obtiene los gastos agrupados por categoría y mes
-    
-    Returns:
-        dict: Diccionario con la estructura {
-            'months': [lista de meses en formato 'YYYY-MM'],
-            'categories': {
-                'Categoría1': [gasto_mes1, gasto_mes2, ...],
-                'Categoría2': [gasto_mes1, gasto_mes2, ...],
-                ...
-            }
-        }
-    """
-    transactions = load_transactions()
-    if not transactions:
-        return {'months': [], 'categories': {}}
-    
-    df = pd.DataFrame(transactions)
-    
-    # Limpieza y conversión de datos
-    df['Amount'] = df['Amount'].str.strip()
-    df = df[df['Amount'] != '']
-    df['Amount'] = (
-        df['Amount']
-        .str.replace('$', '', regex=False)
-        .str.replace('.', '', regex=False)
-        .str.replace(',', '.', regex=False)
-        .astype(float)
-    )
-    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-    df = df.dropna(subset=['Date'])
-    
-    # Filtrar solo gastos
-    expenses_df = df[df['Income/expensive'] == 'expensive'].copy()
-    if len(expenses_df) == 0:
-        return {'months': [], 'categories': {}}
-    
-    # Crear columna de mes
-    expenses_df['Month'] = expenses_df['Date'].dt.to_period('M').dt.strftime('%Y-%m')
-    
-    # Obtener todos los meses únicos ordenados
-    all_months = sorted(expenses_df['Month'].unique())
-    
-    # Agrupar por categoría y mes
-    grouped = expenses_df.groupby(['Category', 'Month'])['Amount'].sum().unstack(fill_value=0)
-    
-    # Asegurarse de que todos los meses estén presentes para cada categoría
-    for month in all_months:
-        if month not in grouped.columns:
-            grouped[month] = 0
-    
-    # Ordenar columnas (meses)
-    grouped = grouped[all_months]
-    
-    # Convertir a diccionario
-    result = {
-        'months': all_months,
-        'categories': {}
-    }
-    
-    for category, row in grouped.iterrows():
-        result['categories'][category] = row.tolist()
-    
-    return result
 
-def analyze_finances(question):
-    """Analizar datos financieros y responder preguntas"""
-    transactions = load_transactions()
+class CSVFinanceManager:
+    """Clase para manejar operaciones financieras con archivos CSV."""
     
-    # Convertir a DataFrame para análisis más fácil
-    df = pd.DataFrame(transactions)
-    
-    # Limpiar y convertir montos a numérico
-    df['Amount'] = df['Amount'].str.strip()
-    df = df[df['Amount'] != '']
-    
-    if len(df) == 0:
-        return "No se encontraron transacciones válidas para analizar."
-    
-    df['Amount'] = (
-        df['Amount']
-        .str.replace('$', '', regex=False)
-        .str.replace('.', '', regex=False)
-        .str.replace(',', '.', regex=False)
-        .astype(float)
-    )
-    
-    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-    df = df.dropna(subset=['Date'])
-    
-    if len(df) == 0:
-        return "No se encontraron transacciones con fechas válidas para analizar."
-    
-    # Obtener gastos por categoría por mes con detalles de transacciones
-    expenses_data = get_expenses_by_category_per_month()
-    
-    # Análisis básico
-    total_income = df[df['Income/expensive'] == 'income']['Amount'].sum()
-    total_expenses = df[df['Income/expensive'] == 'expensive']['Amount'].sum()
-    balance = total_income - total_expenses
-    
-    # Gastos por categoría
-    expense_by_category = df[df['Income/expensive'] == 'expensive'].groupby('Category')['Amount'].sum().sort_values(ascending=False)
-    
-    # Cálculos mensuales
-    df['Month'] = df['Date'].dt.to_period('M')
-    
-    # Ingresos por mes
-    monthly_income = (
-        df[df['Income/expensive'] == 'income']
-        .groupby('Month')['Amount']
-        .sum()
-        .reset_index()
-    )
-    monthly_income['Month'] = monthly_income['Month'].dt.strftime('%Y-%m')
-    
-    # Gastos por mes
-    monthly_expenses = (
-        df[df['Income/expensive'] == 'expensive']
-        .groupby('Month')['Amount']
-        .sum()
-        .reset_index()
-    )
-    monthly_expenses['Month'] = monthly_expenses['Month'].dt.strftime('%Y-%m')
-    
-    # Preparar contexto para la respuesta
-    context = f"""
-    Resumen Financiero:
-    - Ingresos totales: ${total_income:,.0f}
-    - Gastos totales: ${total_expenses:,.0f}
-    - Balance: ${balance:,.0f}
-    
-    Ingresos por mes:
-    """
-    
-    for _, row in monthly_income.iterrows():
-        context += f"  - {row['Month']}: ${row['Amount']:,.0f}\n"
-    
-    context += "\nGastos por mes:\n"
-    for _, row in monthly_expenses.iterrows():
-        context += f"  - {row['Month']}: ${row['Amount']:,.0f}\n"
-    
-    context += "\nGastos por categoría:\n"
-    for category, amount in expense_by_category.items():
-        context += f"  - {category}: ${amount:,.0f}\n"
-    
-    # Agregar gastos por categoría por mes con totales
-    if expenses_data['months']:
-        context += "\nGastos por categoría por mes:\n"
+    def __init__(self, csv_path: Optional[str] = None):
+        """
+        Inicializa el gestor de finanzas con la ruta al archivo CSV.
         
-        # Obtener todas las categorías únicas
-        categories = list(expenses_data['categories'].keys())
+        Args:
+            csv_path: Ruta al archivo CSV. Si es None, usa el archivo por defecto.
+        """
+        if csv_path is None:
+            self.csv_path = Path(__file__).parent / 'movements.csv'
+        else:
+            self.csv_path = Path(csv_path)
         
-        # Procesar cada mes
-        for month in expenses_data['months']:
-            month_total = sum(expenses_data['categories'][category][expenses_data['months'].index(month)] 
-                            for category in categories)
-            
-            context += f"\n  {month} (Total: ${month_total:,.0f}):\n"
-            
-            # Obtener y ordenar categorías por monto descendente
-            sorted_categories = sorted(
-                [(cat, expenses_data['categories'][cat][expenses_data['months'].index(month)]) 
-                 for cat in categories 
-                 if expenses_data['categories'][cat][expenses_data['months'].index(month)] > 0],
-                key=lambda x: x[1],
-                reverse=True
+        self.df = self._load_and_clean_data()
+    
+    def _load_and_clean_data(self) -> pd.DataFrame:
+        """Carga y limpia los datos del archivo CSV."""
+        try:
+            # Cargar datos
+            df = pd.read_csv(
+                self.csv_path, 
+                delimiter=';',
+                parse_dates=['Date'],
+                dayfirst=True
             )
             
-            for category, amount in sorted_categories:
-                context += f"    - {category}: ${amount:,.0f}\n"
+            # Limpiar nombres de columnas
+            df.columns = [col.strip() for col in df.columns]
+            
+            # Limpiar y convertir montos
+            df['Amount'] = (
+                df['Amount']
+                .astype(str)
+                .str.strip()
+                .str.replace('$', '', regex=False)
+                .str.replace('.', '', regex=False)
+                .str.replace(',', '.', regex=False)
+                .astype(float)
+            )
+            
+            # Filtrar filas con montos o fechas inválidas
+            df = df.dropna(subset=['Date', 'Amount'])
+            
+            # Normalizar categoría y tipo
+            if 'Category' in df.columns:
+                df['Category'] = df['Category'].str.strip()
+            
+            if 'Income/expensive' in df.columns:
+                df['Type'] = df['Income/expensive'].str.strip().str.lower()
+            
+            return df
+            
+        except Exception as e:
+            raise ValueError(f"Error al cargar el archivo CSV: {str(e)}")
     
-    # Usar OpenAI para responder la pregunta basada en los datos
-    prompt = f"""
-    Eres un asistente financiero. Basándote en los siguientes datos:
-    {context}
+    def get_transactions(self) -> List[Transaction]:
+        """Devuelve una lista de objetos Transaction."""
+        transactions = []
+        for _, row in self.df.iterrows():
+            try:
+                tx = Transaction(
+                    date=row['Date'],
+                    description=row.get('Description', '').strip(),
+                    amount=float(row['Amount']),
+                    category=row.get('Category', 'Sin categoría').strip(),
+                    type=row.get('Type', 'expensive' if float(row['Amount']) < 0 else 'income')
+                )
+                transactions.append(tx)
+            except Exception as e:
+                print(f"Error al procesar transacción: {row}. Error: {str(e)}")
+        return transactions
     
-    Responde de manera clara y concisa la siguiente pregunta:
-    {question}
-    """
+    def get_monthly_summary(self) -> Dict:
+        """
+        Genera un resumen financiero mensual.
+        
+        Returns:
+            Dict con el formato:
+            {
+                'months': [lista de meses en formato 'YYYY-MM'],
+                'categories': {
+                    'Categoría1': [gasto_mes1, gasto_mes2, ...],
+                    'Categoría2': [gasto_mes1, gasto_mes2, ...],
+                    ...
+                }
+            }
+        """
+        if self.df.empty:
+            return {'months': [], 'categories': {}}
+        
+        # Crear copia para no modificar el DataFrame original
+        df = self.df.copy()
+        
+        # Filtrar solo gastos
+        expenses_df = df[df['Type'] == 'expensive']
+        if expenses_df.empty:
+            return {'months': [], 'categories': {}}
+        
+        # Crear columna de mes
+        expenses_df['Month'] = expenses_df['Date'].dt.to_period('M').dt.strftime('%Y-%m')
+        
+        # Obtener meses únicos ordenados
+        all_months = sorted(expenses_df['Month'].unique())
+        
+        # Agrupar por categoría y mes
+        grouped = expenses_df.groupby(['Category', 'Month'])['Amount'].sum().unstack(fill_value=0)
+        
+        # Asegurar que todos los meses estén presentes
+        for month in all_months:
+            if month not in grouped.columns:
+                grouped[month] = 0
+        
+        # Ordenar columnas (meses)
+        grouped = grouped[all_months] if all_months else pd.DataFrame()
+        
+        # Convertir a diccionario
+        return {
+            'months': all_months,
+            'categories': {category: amounts.tolist() 
+                         for category, amounts in grouped.iterrows()}
+        }
     
-    return prompt
+    def get_financial_summary(self) -> Dict:
+        """
+        Genera un resumen financiero general.
+        
+        Returns:
+            Dict con el resumen financiero.
+        """
+        if self.df.empty:
+            return {}
+        
+        # Cálculos básicos
+        income = self.df[self.df['Type'] == 'income']['Amount'].sum()
+        expenses = self.df[self.df['Type'] == 'expensive']['Amount'].sum()
+        balance = income - expenses
+        
+        # Gastos por categoría
+        expenses_by_category = (
+            self.df[self.df['Type'] == 'expensive']
+            .groupby('Category')['Amount']
+            .sum()
+            .sort_values(ascending=False)
+            .to_dict()
+        )
+        
+        return {
+            'total_income': income,
+            'total_expenses': expenses,
+            'balance': balance,
+            'expenses_by_category': expenses_by_category
+        }
+    
+    def analyze_finances(self, question: str) -> str:
+        """
+        Analiza las finanzas y genera una respuesta a una pregunta.
+        
+        Args:
+            question: Pregunta sobre los datos financieros.
+            
+        Returns:
+            Respuesta formateada.
+        """
+        # Obtener datos para el análisis
+        monthly_data = self.get_monthly_summary()
+        summary = self.get_financial_summary()
+        
+        # Generar contexto
+        context = f"""
+        Resumen Financiero:
+        - Ingresos totales: ${summary['total_income']:,.0f}
+        - Gastos totales: ${summary['total_expenses']:,.0f}
+        - Balance: ${summary['balance']:,.0f}
+        
+        Gastos por categoría:
+        """
+        
+        for category, amount in summary['expenses_by_category'].items():
+            context += f"  - {category}: ${amount:,.0f}\n"
+        
+        # Agregar gastos por categoría por mes
+        if monthly_data['months']:
+            context += "\nGastos por categoría por mes:\n"
+            
+            for month in monthly_data['months']:
+                month_total = sum(
+                    monthly_data['categories'][cat][monthly_data['months'].index(month)]
+                    for cat in monthly_data['categories']
+                )
+                
+                context += f"\n  {month} (Total: ${month_total:,.0f}):\n"
+                
+                # Ordenar categorías por monto descendente
+                sorted_categories = sorted(
+                    [(cat, monthly_data['categories'][cat][monthly_data['months'].index(month)]) 
+                     for cat in monthly_data['categories'] 
+                     if monthly_data['categories'][cat][monthly_data['months'].index(month)] > 0],
+                    key=lambda x: x[1],
+                    reverse=True
+                )
+                
+                for category, amount in sorted_categories:
+                    context += f"    - {category}: ${amount:,.0f}\n"
+        
+        # Aquí podrías integrar con OpenAI para responder preguntas específicas
+        # Por ahora, simplemente devolvemos el contexto
+        return context
+
+
+# Funciones de conveniencia para mantener compatibilidad con el código existente
+def get_expenses_by_category_per_month():
+    """Función de conveniencia para mantener compatibilidad."""
+    manager = CSVFinanceManager()
+    return manager.get_monthly_summary()
+
+def analyze_finances(question: str) -> str:
+    """Función de conveniencia para mantener compatibilidad."""
+    manager = CSVFinanceManager()
+    return manager.analyze_finances(question)
