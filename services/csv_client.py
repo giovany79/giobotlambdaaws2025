@@ -21,13 +21,10 @@ def load_transactions():
         print(f"Error al cargar transacciones: {str(e)}")
         return []
 
-def get_expenses_by_category_per_month(include_transactions=False):
+def get_expenses_by_category_per_month():
     """
     Obtiene los gastos agrupados por categoría y mes
     
-    Args:
-        include_transactions (bool): Si es True, incluye los detalles de las transacciones
-        
     Returns:
         dict: Diccionario con la estructura {
             'months': [lista de meses en formato 'YYYY-MM'],
@@ -35,22 +32,12 @@ def get_expenses_by_category_per_month(include_transactions=False):
                 'Categoría1': [gasto_mes1, gasto_mes2, ...],
                 'Categoría2': [gasto_mes1, gasto_mes2, ...],
                 ...
-            },
-            'transactions': {
-                'YYYY-MM': {
-                    'Categoría1': [
-                        {'date': 'DD/MM/YYYY', 'description': '...', 'amount': 123.45},
-                        ...
-                    ],
-                    ...
-                },
-                ...
             }
         }
     """
     transactions = load_transactions()
     if not transactions:
-        return {'months': [], 'categories': {}, 'transactions': {}}
+        return {'months': [], 'categories': {}}
     
     df = pd.DataFrame(transactions)
     
@@ -70,16 +57,15 @@ def get_expenses_by_category_per_month(include_transactions=False):
     # Filtrar solo gastos
     expenses_df = df[df['Income/expensive'] == 'expensive'].copy()
     if len(expenses_df) == 0:
-        return {'months': [], 'categories': {}, 'transactions': {}}
+        return {'months': [], 'categories': {}}
     
     # Crear columna de mes
     expenses_df['Month'] = expenses_df['Date'].dt.to_period('M').dt.strftime('%Y-%m')
-    expenses_df['Date'] = expenses_df['Date'].dt.strftime('%d/%m/%Y')  # Formatear fecha para mostrar
     
     # Obtener todos los meses únicos ordenados
     all_months = sorted(expenses_df['Month'].unique())
     
-    # Agrupar por categoría y mes para los totales
+    # Agrupar por categoría y mes
     grouped = expenses_df.groupby(['Category', 'Month'])['Amount'].sum().unstack(fill_value=0)
     
     # Asegurarse de que todos los meses estén presentes para cada categoría
@@ -90,29 +76,10 @@ def get_expenses_by_category_per_month(include_transactions=False):
     # Ordenar columnas (meses)
     grouped = grouped[all_months]
     
-    # Preparar el diccionario de transacciones
-    transactions_dict = {}
-    if include_transactions:
-        for month in all_months:
-            month_transactions = {}
-            month_data = expenses_df[expenses_df['Month'] == month]
-            
-            for category, group in month_data.groupby('Category'):
-                month_transactions[category] = [
-                    {
-                        'date': row['Date'],
-                        'description': row['Description'],
-                        'amount': row['Amount']
-                    }
-                    for _, row in group.iterrows()
-                ]
-            transactions_dict[month] = month_transactions
-    
     # Convertir a diccionario
     result = {
         'months': all_months,
-        'categories': {},
-        'transactions': transactions_dict if include_transactions else {}
+        'categories': {}
     }
     
     for category, row in grouped.iterrows():
@@ -149,7 +116,7 @@ def analyze_finances(question):
         return "No se encontraron transacciones con fechas válidas para analizar."
     
     # Obtener gastos por categoría por mes con detalles de transacciones
-    expenses_data = get_expenses_by_category_per_month(include_transactions=True)
+    expenses_data = get_expenses_by_category_per_month()
     
     # Análisis básico
     total_income = df[df['Income/expensive'] == 'income']['Amount'].sum()
@@ -201,7 +168,7 @@ def analyze_finances(question):
     for category, amount in expense_by_category.items():
         context += f"  - {category}: ${amount:,.0f}\n"
     
-    # Agregar gastos por categoría por mes con totales y transacciones
+    # Agregar gastos por categoría por mes con totales
     if expenses_data['months']:
         context += "\nGastos por categoría por mes:\n"
         
@@ -226,11 +193,6 @@ def analyze_finances(question):
             
             for category, amount in sorted_categories:
                 context += f"    - {category}: ${amount:,.0f}\n"
-                
-                # Mostrar transacciones detalladas si existen
-                if month in expenses_data['transactions'] and category in expenses_data['transactions'][month]:
-                    for tx in expenses_data['transactions'][month][category]:
-                        context += f"      * {tx['date']} - {tx['description']}: ${tx['amount']:,.0f}\n"
     
     # Usar OpenAI para responder la pregunta basada en los datos
     prompt = f"""
