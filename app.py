@@ -3,8 +3,13 @@ import time
 import random
 from handlers.telegram_handler import extract_message
 from services.telegram_client import send_message_to_telegram
-from services.openai_client import get_ai_response
-from services.csv_client import analyze_finances
+from services.openai_client import get_ai_response, analyze_finances
+from services.csv_client import analyze_finances as csv_analyze_finances
+from services.operations_client import (
+    get_operations,
+    analize_operation_prompt,
+    operation_functions,
+)
 from dotenv import load_dotenv
 import os
 import logging
@@ -21,6 +26,10 @@ def lambda_handler(event, context):
     logger.info(f"Received event: {json.dumps(event, indent=2)}")
     
     try:
+        # Load available operations
+        operations = get_operations()
+        logger.info(f"Loaded operations: {operations}")
+
         # Extraemos chatid y mensaje del evento
         chat_id, message_text = extract_message(event)
         logger.info(f"Processing message from chat {chat_id}: {message_text}")
@@ -39,12 +48,56 @@ def lambda_handler(event, context):
                 "body": json.dumps({"status": "success", "message": "Unsupported message type handled"})
             }
         
-        # Process normal text message
-        prompt = analyze_finances(message_text)
-        response = get_ai_response(prompt)
+        # 1. Determine which operation to execute based on the user's message
+        prompt = analize_operation_prompt(operations, message_text)
+        operation_response_str = get_ai_response(prompt)
+        logger.info(f"Operation response from AI: {operation_response_str}")
+        print("Operation response from AI: ", operation_response_str)
+        try:
+            # Extraer el JSON del string, que puede contener markdown
+            json_start = operation_response_str.find('{')
+            json_end = operation_response_str.rfind('}') + 1
+            if json_start != -1 and json_end > json_start:
+                json_str = operation_response_str[json_start:json_end]
+                operation_result = json.loads(json_str)
+            else:
+                operation_result = {}
+                logger.warning("No JSON object found in operation_response_str.")
+        except json.JSONDecodeError as e:
+            logger.error(f"Error decoding JSON: {e} from string: {operation_response_str}")
+            operation_result = {}
+        
+        
+        print(operation_result)
+
+        
+        # 2. Execute the identified operation
+        operation_name = operation_result.get("operation")
+        operation_params= operation_result.get("params")
+        print("operation: ", operation_name)
+        print("params: ", operation_params)
+
+        if operation_name in operation_functions:
+            operation_function = operation_functions[operation_name]
+            if operation_params:
+                data = operation_function(**operation_params)
+            else:
+                data = operation_function()
+            logger.info(f"Data from operation '{operation_name}': {data}")
+        else:
+            data = {"error": f"Operation '{operation_name}' not found."}
+            logger.error(f"Operation '{operation_name}' not found.")
+
+        print("Data from operation: ", data)
+        # 3. Generate the final response for the user based on the operation result
+        final_prompt = analyze_finances(message_text, data)
+        print("Final prompt: ", final_prompt)
+        
+        final_response = get_ai_response(final_prompt)
+        print("Final response: ", final_response)
                                       
         # Enviamos la respuesta a Telegram
-        send_message_to_telegram(chat_id, response)
+        send_message_to_telegram(chat_id, final_response)
         logger.info("Response sent successfully")
 
         return {

@@ -16,12 +16,27 @@ def get_ai_response(prompt: str) -> str:
     # Si no es sobre finanzas, usar el modelo de IA normal
     try:
         response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1000,
             temperature=0.5
         )
         return response.choices[0].message.content
     except Exception as e:
-        print(f"Error al llamar a OpenAI: {str(e)}")
-        return "Lo siento, hubo un error al procesar tu solicitud."
+        print(f"Error getting AI response: {e}")
+        return "Sorry, I couldn't process your request."
+
+def analyze_finances(user_message, operation_result):
+    """
+    Creates a prompt for the AI to analyze financial data based on the user's message and operation result.
+    """
+    prompt = f"""
+    Eres un experto en finanzas. Basado en la siguiente pregunta del usuario:
+    '{user_message}'
+    
+    Y los siguientes datos calculados de sus movimientos financieros:
+    '{operation_result}'
+
+    Proporciona una respuesta clara consisa y amigable para el usuario en español. 
+    """
+    return prompt

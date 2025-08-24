@@ -87,6 +87,20 @@ def get_expenses_by_category_per_month():
     
     return result
 
+def get_expenses_by_category_and_month(category, month):
+    df = load_transactions()
+    df['Date'] = pd.to_datetime(df['Date'])
+    
+    # Asegurarse de que el mes sea un string con dos dígitos, por ejemplo '08'
+    month_str = str(month).zfill(2)
+    
+    filtered_df = df[
+        (df['Category'].str.lower() == category.lower()) &
+        (df['Date'].dt.month == int(month_str)) &
+        (df['Income/expensive'].str.lower() == 'expensive')
+    ]
+    return filtered_df.to_dict('records')
+
 def analyze_finances(question):
     """Analizar datos financieros y responder preguntas"""
     transactions = load_transactions()

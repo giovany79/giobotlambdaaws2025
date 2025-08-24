@@ -1,0 +1,57 @@
+[
+  {
+    "id": "1",
+    "name": "Incomes and expenses by year",
+    "mehtod": "incomes_expenses_by_year"
+  },
+  {
+    "id": "2",
+    "name": "Expenses by month",
+    "mehtod": "expenses_by_month",
+    "params": {
+        "month": "month"
+    }
+  },
+  {
+    "id": "3",
+    "name": "Incomes by month",
+    "mehtod": "incomes_by_month",
+    "params": {
+        "month": "month"
+    }
+  },
+  {
+    "id": "4",
+    "name": "Expenses by_category by year",
+    "mehtod": "expenses_by_category_by_year",
+    "params": {
+        "category": "category"
+    }
+  },
+  {
+    "id": "5",
+    "name": "incomes by category by year",
+    "mehtod": "incomes_by_category_by_year",
+    "params": {
+        "category": "category"
+    }
+  },
+  {
+    "id": "6",
+    "name": "Expenses by_category by month",
+    "mehtod": "expenses_by_category_by_month",
+    "params": {
+        "category": "category",
+        "month": "month"
+    }
+  },
+  {
+    "id": "7",
+    "name": "Movements by category and month",
+    "mehtod": "movements_by_category_and_month",
+    "params": {
+        "category": "category",
+        "month": "month"
+    }
+  }
+]
