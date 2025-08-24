@@ -94,5 +94,48 @@ def test_lambda_handler():
     assert response['statusCode'] == 200
     print("\n✅ Prueba exitosa!")
 
+def test_invalid_message():
+    """Test with invalid message format"""
+    test_event = {
+        "resource": "/webhook",
+        "path": "/webhook",
+        "httpMethod": "POST",
+        "body": "invalid_json_content",
+        "isBase64Encoded": False
+    }
+    
+    test_context = {}
+    
+    response = app.lambda_handler(test_event, test_context)
+    
+    print("\nRespuesta con mensaje inválido:")
+    print(json.dumps(response, indent=2))
+    
+    assert response['statusCode'] == 400
+    print("✅ Error handling funcionó correctamente!")
+
+def test_health_check():
+    """Test health check endpoint"""
+    test_event = {
+        "resource": "/webhook",
+        "path": "/webhook",
+        "httpMethod": "GET"
+    }
+    
+    test_context = {}
+    
+    response = app.lambda_handler(test_event, test_context)
+    
+    print("\nRespuesta de health check:")
+    print(json.dumps(response, indent=2))
+    
+    assert response['statusCode'] == 200
+    assert "healthy" in response['body']
+    print("✅ Health check funcionó correctamente!")
+
 if __name__ == "__main__":
     test_lambda_handler()
+    print("\n" + "="*50)
+    test_invalid_message()
+    print("\n" + "="*50)
+    test_health_check()

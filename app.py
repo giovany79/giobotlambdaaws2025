@@ -25,14 +25,36 @@ load_dotenv()
 def lambda_handler(event, context):
     logger.info(f"Received event: {json.dumps(event, indent=2)}")
     
+    # Handle health checks or non-POST requests
+    http_method = event.get('httpMethod', '').upper()
+    if http_method == 'GET':
+        logger.info("Health check request received")
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"status": "healthy", "service": "telegram-bot-lambda"})
+        }
+    elif http_method != 'POST':
+        logger.warning(f"Unsupported HTTP method: {http_method}")
+        return {
+            "statusCode": 405,
+            "body": json.dumps({"error": "Method not allowed"})
+        }
+    
     try:
         # Load available operations
         operations = get_operations()
         logger.info(f"Loaded operations: {operations}")
 
         # Extraemos chatid y mensaje del evento
-        chat_id, message_text = extract_message(event)
-        logger.info(f"Processing message from chat {chat_id}: {message_text}")
+        try:
+            chat_id, message_text = extract_message(event)
+            logger.info(f"Processing message from chat {chat_id}: {message_text}")
+        except ValueError as ve:
+            logger.error(f"Message extraction failed: {str(ve)}")
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"error": f"Invalid message format: {str(ve)}"})
+            }
         
         # Handle special message types
         if message_text == "[VOICE_MESSAGE]":
