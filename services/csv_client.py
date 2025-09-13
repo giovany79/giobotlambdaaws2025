@@ -87,19 +87,116 @@ def get_expenses_by_category_per_month():
     
     return result
 
-def get_expenses_by_category_and_month(category, month):
-    df = load_transactions()
-    df['Date'] = pd.to_datetime(df['Date'])
+def _convert_datetime_to_str(obj):
+    """Recursively convert datetime objects to strings in a dictionary."""
+    from datetime import datetime, date
     
-    # Asegurarse de que el mes sea un string con dos dígitos, por ejemplo '08'
-    month_str = str(month).zfill(2)
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {k: _convert_datetime_to_str(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_convert_datetime_to_str(item) for item in obj]
+    return obj
+
+def get_expenses_by_category_and_month(category=None, month=None):
+    """
+    Obtiene los gastos por categoría y mes. Si no se proporciona una categoría,
+    devuelve los gastos de todas las categorías para el mes especificado.
     
-    filtered_df = df[
-        (df['Category'].str.lower() == category.lower()) &
-        (df['Date'].dt.month == int(month_str)) &
-        (df['Income/expensive'].str.lower() == 'expensive')
-    ]
-    return filtered_df.to_dict('records')
+    Args:
+        category (str, optional): Categoría a filtrar. Si es None, se devuelven todas las categorías.
+        month (str): Mes a filtrar en formato 'MM'.
+        
+    Returns:
+        dict: Diccionario con los gastos por categoría para el mes especificado.
+    """
+    transactions = load_transactions()
+    if not transactions:
+        return {"month": str(month) if month else "all", "categories": {}}
+    
+    df = pd.DataFrame(transactions)
+    
+    try:
+        # Limpieza y conversión de datos
+        df['Amount'] = df['Amount'].str.strip()
+        df = df[df['Amount'] != '']
+        df['Amount'] = (
+            df['Amount']
+            .str.replace('$', '', regex=False)
+            .str.replace('.', '', regex=False)
+            .str.replace(',', '.', regex=False)
+            .astype(float)
+        )
+        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+        df = df.dropna(subset=['Date'])
+        
+        # Filtrar solo gastos
+        expenses_df = df[df['Income/expensive'].str.lower() == 'expensive'].copy()
+        
+        # Si no hay gastos, retornar estructura vacía
+        if len(expenses_df) == 0:
+            return {"month": str(month) if month else "all", "categories": {}}
+        
+        # Crear columna de mes y año para filtrar
+        expenses_df['Month'] = expenses_df['Date'].dt.month.astype(str).str.zfill(2)
+        expenses_df['Year'] = expenses_df['Date'].dt.year.astype(str)
+        
+        # Filtrar por mes si se proporciona
+        if month is not None:
+            month_str = str(month).zfill(2)
+            expenses_df = expenses_df[expenses_df['Month'] == month_str]
+        
+        # Si no hay gastos después de filtrar por mes, retornar estructura vacía
+        if len(expenses_df) == 0:
+            return {"month": str(month) if month else "all", "categories": {}}
+        
+        # Si se proporciona una categoría, filtrar por ella
+        if category is not None and str(category).lower() != 'category':
+            expenses_df = expenses_df[expenses_df['Category'].str.lower() == category.lower()]
+            
+            if len(expenses_df) == 0:
+                return {
+                    "month": str(month) if month else "all",
+                    "category": category,
+                    "total": 0,
+                    "transactions": []
+                }
+            
+            # Convertir las transacciones a un formato serializable
+            transactions = expenses_df.to_dict('records')
+            transactions = _convert_datetime_to_str(transactions)
+            
+            return {
+                "month": str(month) if month else "all",
+                "category": category,
+                "total": float(expenses_df['Amount'].sum()),
+                "transactions": transactions
+            }
+        else:
+            # Si no se especificó categoría, devolver todas las categorías
+            grouped = expenses_df.groupby('Category')['Amount'].sum().to_dict()
+            
+            # Obtener todas las transacciones agrupadas por categoría
+            transactions_by_category = {}
+            for cat in grouped.keys():
+                cat_transactions = expenses_df[expenses_df['Category'].str.lower() == cat.lower()].to_dict('records')
+                transactions_by_category[cat] = _convert_datetime_to_str(cat_transactions)
+            
+            return {
+                "month": str(month) if month else "all",
+                "categories": {k: float(v) for k, v in grouped.items()},
+                "transactions_by_category": transactions_by_category
+            }
+            
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        return {
+            "error": f"Error al procesar los gastos: {str(e)}",
+            "details": error_details,
+            "status": "error"
+        }
 
 def analyze_finances(question):
     """Analizar datos financieros y responder preguntas"""

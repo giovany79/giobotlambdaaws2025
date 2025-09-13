@@ -157,27 +157,66 @@ def incomes_by_category_by_year(category):
     return result.to_dict()
 
 
+def _convert_datetime_to_str(obj):
+    """Recursively convert datetime objects to strings in a dictionary."""
+    from datetime import datetime, date
+    
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {k: _convert_datetime_to_str(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_convert_datetime_to_str(item) for item in obj]
+    return obj
+
 def expenses_by_category_by_month(category, month):
-    """Calculates expenses by category by month."""
-    df = _get_prepared_data()
-    if df.empty:
-        return {"error": "No data available"}
-
-    if not category or not month:
-        return {"error": "Category or month not provided"}
-
-    month_number = _get_month_number(month)
-    if not month_number:
-        return {"error": f"Invalid month provided: {month}"}
-
-    df_filtered = df[(
-        (df['Income/expensive'] == 'expensive') &
-        (df['Category'].str.lower() == category.lower()) &
-        (df['Month'] == month_number)
-    )]
-    result = df_filtered.groupby('Year')['Amount'].sum()
-    return result.to_dict()
-
+    """Calculates expenses by category by month.
+    
+    Args:
+        category (str): The category to filter by. Can be None to get all categories.
+        month (str or int): The month to filter by (can be name or number).
+        
+    Returns:
+        dict: A dictionary with the expenses data or an error message.
+    """
+    try:
+        month_number = _get_month_number(month)
+        if not month_number:
+            return {"error": f"Invalid month provided: {month}", "status": "error"}
+        
+        # Use the csv_client function which handles the data loading and processing
+        result = csv_client.get_expenses_by_category_and_month(
+            category=category if category != "category" else None,
+            month=month_number
+        )
+        
+        # Convert any datetime objects to strings for JSON serialization
+        result = _convert_datetime_to_str(result)
+        
+        # If we got an empty result, return a helpful message
+        if not result or (isinstance(result, dict) and not result.get('categories') and not result.get('total')):
+            month_name = next((k for k, v in MONTH_MAP.items() if v == month_number), str(month_number))
+            month_name = month_name.capitalize()
+            if category and category != "category":
+                return {
+                    "message": f"No se encontraron gastos para la categoría '{category}' en {month_name}.",
+                    "status": "no_data"
+                }
+            else:
+                return {
+                    "message": f"No se encontraron gastos registrados para {month_name}.",
+                    "status": "no_data"
+                }
+        
+        return result
+        
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        return {
+            "error": f"Error al procesar la solicitud: {str(e)}\n\n{error_details}",
+            "status": "error"
+        }
 
 def movements_by_category_and_month(category, month):
     """Calculates movements by category and month."""

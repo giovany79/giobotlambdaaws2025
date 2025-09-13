@@ -77,7 +77,7 @@ def test_lambda_handler():
             "deploymentId": "a1a8mj",
             "apiId": "ykhl1jughk"
         },
-        "body": "eyJ1cGRhdGVfaWQiOjYyMjYzOTIzNSwKIm1lc3NhZ2UiOnsibWVzc2FnZV9pZCI6Mjc5LCJmcm9tIjp7ImlkIjo2Mjk5NzUzMDQ4LCJpc19ib3QiOmZhbHNlLCJmaXJzdF9uYW1lIjoiR2lvdmFueSIsImxhc3RfbmFtZSI6IlZpbGxlZ2FzIiwibGFuZ3VhZ2VfY29kZSI6ImVuIn0sImNoYXQiOnsiaWQiOjYyOTk3NTMwNDgsImZpcnN0X25hbWUiOiJHaW92YW55IiwibGFzdF9uYW1lIjoiVmlsbGVnYXMiLCJ0eXBlIjoicHJpdmF0ZSJ9LCJkYXRlIjoxNzU1OTU1NDI4LCJ0ZXh0IjoiTWUgcHVlZGVzIGRlY2lyIGxvcyBtb3ZtaWVudG9zIGVuIGVudGVydGFpbm1lbnQgZW4gZWwgbWVzIGRlIGFnb3N0byJ9fQ==",
+        "body": "eyJ1cGRhdGVfaWQiOjYyMjYzOTIzNSwKIm1lc3NhZ2UiOnsibWVzc2FnZV9pZCI6Mjc5LCJmcm9tIjp7ImlkIjo2Mjk5NzUzMDQ4LCJpc19ib3QiOmZhbHNlLCJmaXJzdF9uYW1lIjoiR2lvdmFueSIsImxhc3RfbmFtZSI6IlZpbGxlZ2FzIiwibGFuZ3VhZ2VfY29kZSI6ImVuIn0sImNoYXQiOnsiaWQiOjYyOTk3NTMwNDgsImZpcnN0X25hbWUiOiJHaW92YW55IiwibGFzdF9uYW1lIjoiVmlsbGVnYXMiLCJ0eXBlIjoicHJpdmF0ZSJ9LCJkYXRlIjoxNzU1OTU1NDI4LCJ0ZXh0IjoiTWUgcHVlZGVzIGRlY2lyIGxvcyBnYXN0b3MgcG9yIGNhdGVnb3LDrWEgZW4gZWwgbWVzIGRlIGFnb3N0byJ9fQ==",
         "isBase64Encoded": True
     }
     
