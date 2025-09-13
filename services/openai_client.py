@@ -11,20 +11,23 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 def get_ai_response(prompt: str) -> str:
-    """Obtener respuesta de OpenAI"""
+    """Obtener respuesta de OpenAI sin mantener historial de conversación"""
     
-    # Si no es sobre finanzas, usar el modelo de IA normal
     try:
+        # Siempre crear una nueva conversación con solo el mensaje actual
         response = openai_client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": "Eres un asistente útil. Responde solo a la pregunta actual sin hacer referencia a mensajes anteriores."},
+                {"role": "user", "content": prompt}
+            ],
             max_tokens=1000,
             temperature=0.5
         )
         return response.choices[0].message.content
     except Exception as e:
         print(f"Error getting AI response: {e}")
-        return "Sorry, I couldn't process your request."
+        return "Lo siento, no pude procesar tu solicitud en este momento."
 
 def analyze_finances(user_message, operation_result):
     """
